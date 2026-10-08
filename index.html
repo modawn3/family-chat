@@ -81,6 +81,9 @@
         <button id="new-pill" class="new-pill" type="button" hidden>새 메시지 ↓</button>
 
         <form id="composer" class="composer">
+          <button id="btn-sticker" class="icon-btn attach" type="button" aria-label="이모티콘" title="이모티콘" aria-expanded="false" aria-controls="sticker-panel">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18z"/><path d="M8.5 14.2s1.3 1.9 3.5 1.9 3.5-1.9 3.5-1.9"/><path d="M9 9.6h.01M15 9.6h.01" stroke-width="2.6"/></svg>
+          </button>
           <label class="icon-btn attach" aria-label="사진 보내기" title="사진 보내기">
             <input id="file" type="file" accept="image/*" multiple hidden>
             <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.1-3.1a2 2 0 0 0-2.8 0L6 21"/></svg>
@@ -90,6 +93,7 @@
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V5"/><path d="m5 12 7-7 7 7"/></svg>
           </button>
         </form>
+        <div id="sticker-panel" class="sticker-panel" role="listbox" aria-label="이모티콘" hidden></div>
       </div>
 
       <!-- 달력 탭 -->

@@ -1,6 +1,6 @@
 // 서비스 워커: 앱 화면 캐시 + 푸시 알림 표시
 // 앱 파일을 수정해서 다시 배포할 때는 아래 버전 숫자를 올려 주세요.
-const CACHE = "family-chat-v3";
+const CACHE = "family-chat-v4";
 // 받은 사진은 여기에 보관해서 다시 내려받지 않아요 (앱 버전이 바뀌어도 유지)
 const IMAGE_CACHE = "family-chat-images";
 const IMAGE_CACHE_MAX = 800; // 이보다 많으면 오래된 사진부터 기기에서 지움 (서버 사진은 그대로)
@@ -11,6 +11,7 @@ const SHELL = [
   "./style.css",
   "./app.js",
   "./calendar.js",
+  "./stickers.js",
   "./config.js",
   "./manifest.webmanifest",
   "./icons/icon-192.png",
@@ -64,6 +65,19 @@ self.addEventListener("fetch", (event) => {
 
   if (url.pathname.includes(IMAGE_PATH)) {
     event.respondWith(cachedImage(req).catch(() => fetch(req)));
+    return;
+  }
+
+  // 이모티콘: 한 번 받으면 기기에 저장 (파일을 바꾸면 stickers.js 의 버전 숫자로 새로 받음)
+  if (url.origin === self.location.origin && url.pathname.includes("/stickers/")) {
+    event.respondWith((async () => {
+      const cache = await caches.open(IMAGE_CACHE);
+      const hit = await cache.match(req.url);
+      if (hit) return hit;
+      const res = await fetch(req);
+      if (res.ok) await cache.put(req.url, res.clone());
+      return res;
+    })().catch(() => fetch(req)));
     return;
   }
 

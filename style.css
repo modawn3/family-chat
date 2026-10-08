@@ -198,6 +198,23 @@ button { font: inherit; color: inherit; }
 .send svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
 .chat.dragging .messages { outline: 2px dashed var(--accent); outline-offset: -8px; }
 
+/* ---------- 이모티콘 ---------- */
+.sticker-panel {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(86px, 1fr)); gap: 6px;
+  padding: 10px 10px calc(10px + env(safe-area-inset-bottom));
+  max-height: 40vh; overflow-y: auto; -webkit-overflow-scrolling: touch;
+  background: var(--surface); border-top: 1px solid var(--line);
+}
+.sticker-pick {
+  border: 0; background: var(--bg); border-radius: 12px; padding: 4px; cursor: pointer;
+  aspect-ratio: 1; display: grid; place-items: center; overflow: hidden;
+}
+.sticker-pick:hover, .sticker-pick:focus-visible { background: var(--surface-2); }
+.sticker-pick img { max-width: 100%; max-height: 100%; object-fit: contain; border-radius: 8px; }
+#btn-sticker[aria-expanded="true"] { color: var(--accent); }
+.bubble.sticker-msg { background: none; box-shadow: none; padding: 0; border-radius: 14px; }
+.sticker-msg img { display: block; height: auto; max-width: 62vw; border-radius: 14px; }
+
 /* ---------- 탭 ---------- */
 .pane { flex: 1; min-height: 0; display: flex; flex-direction: column; position: relative; }
 .tabs { display: flex; background: var(--bg); border-bottom: 1px solid var(--line); }

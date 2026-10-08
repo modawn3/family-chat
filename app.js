@@ -1,6 +1,10 @@
 import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
 import { CONFIG } from "./config.js";
 import { createCalendar, announceText, whenText, todayStr, timeText } from "./calendar.js";
+import { STICKERS, STICKER_VERSION } from "./stickers.js";
+
+const stickerById = new Map(STICKERS.map((s) => [s.id, s]));
+const stickerUrl = (s) => `stickers/${s.id}.webp?v=${STICKER_VERSION}`;
 
 // ---------------------------------------------------------------------
 // 기본 설정
@@ -54,6 +58,7 @@ const el = {
   banner: $("#install-banner"), lightbox: $("#lightbox"), toast: $("#toast"),
   tabs: document.querySelectorAll(".tabs [data-tab]"), paneChat: $("#pane-chat"), paneCal: $("#pane-cal"),
   chatDot: $("#chat-dot"), todayStrip: $("#today-strip"),
+  stickerBtn: $("#btn-sticker"), stickerPanel: $("#sticker-panel"),
 };
 
 const state = {
@@ -392,7 +397,7 @@ function appendMessage(m, prev) {
   row.className = "row";
 
   // 일정 메시지는 카드로, 일정이 삭제됐으면 보통 글자로 표시
-  const card = m.event_id ? renderEventCard(m) : null;
+  const card = (m.event_id ? renderEventCard(m) : null) || renderSticker(m);
   const bubble = card || document.createElement("div");
   if (!card) bubble.className = "bubble";
   if (!card && m.image_path) {
@@ -450,6 +455,72 @@ function linkify(container, text) {
 // ---------------------------------------------------------------------
 // 달력 연결: 탭, 일정 카드, 오늘 일정
 // ---------------------------------------------------------------------
+// ---------------------------------------------------------------------
+// 이모티콘: 파일은 앱과 함께 있고, 메시지에는 이름(sticker)만 저장 → Supabase 용량을 쓰지 않음
+// ---------------------------------------------------------------------
+function renderSticker(m) {
+  if (m.kind !== "sticker") return null;
+  const s = stickerById.get(m.sticker);
+  if (!s) return null; // 지워진 이모티콘이면 "(이모티콘) 이름" 글자로 표시
+  const wrap = document.createElement("div");
+  wrap.className = "bubble sticker-msg";
+  const img = document.createElement("img");
+  img.src = stickerUrl(s);
+  img.alt = s.label;
+  img.title = s.label;
+  img.decoding = "async";
+  img.style.width = `${s.w / 2}px`;
+  img.style.aspectRatio = `${s.w} / ${s.h}`;
+  img.addEventListener("load", () => { if (isNearBottom(300)) el.list.scrollTop = el.list.scrollHeight; }, { once: true });
+  wrap.append(img);
+  return wrap;
+}
+
+function buildStickerPanel() {
+  el.stickerPanel.replaceChildren(...STICKERS.map((s) => {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "sticker-pick";
+    b.setAttribute("role", "option");
+    b.setAttribute("aria-label", s.label);
+    b.title = s.label;
+    const img = document.createElement("img");
+    img.src = stickerUrl(s);
+    img.alt = "";
+    img.loading = "lazy";
+    img.decoding = "async";
+    b.append(img);
+    b.addEventListener("click", () => sendSticker(s));
+    return b;
+  }));
+}
+
+function toggleStickerPanel(open = el.stickerPanel.hidden) {
+  if (open && !el.stickerPanel.childElementCount) buildStickerPanel();
+  const nearBottom = isNearBottom();
+  el.stickerPanel.hidden = !open;
+  el.stickerBtn.setAttribute("aria-expanded", String(open));
+  if (open && isTouch) el.input.blur(); // 휴대폰: 키보드 대신 이모티콘 창
+  if (nearBottom) el.list.scrollTop = el.list.scrollHeight;
+}
+el.stickerBtn.addEventListener("click", () => toggleStickerPanel());
+el.input.addEventListener("focus", () => { if (isTouch && !el.stickerPanel.hidden) toggleStickerPanel(false); });
+
+async function sendSticker(s) {
+  if (!state.me) return;
+  toggleStickerPanel(false);
+  const { data, error } = await sb.from("messages")
+    .insert({ kind: "sticker", sticker: s.id, content: `(이모티콘) ${s.label}` })
+    .select().single();
+  if (error) {
+    toast(/sticker|kind/i.test(error.message)
+      ? "이모티콘을 쓰려면 Supabase에서 update-3-stickers.sql 을 먼저 실행해 주세요."
+      : `보내지 못했어요: ${error.message}`, 5000);
+    return;
+  }
+  addMessages([data]);
+}
+
 function renderEventCard(m) {
   const ev = cal?.get(m.event_id);
   if (!ev) return null;
