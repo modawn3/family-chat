@@ -12,8 +12,7 @@ export const CONFIG = {
   SUPABASE_ANON_KEY: "sb_publishable_wENcAOvX0qM99J4C4zoCPw_A0gGPKiS",
 
   // tools/vapid-keys.html 에서 만든 VAPID_PUBLIC_KEY (87자). 비워두면 알림 버튼이 숨겨져요.
-  VAPID_PUBLIC_KEY: "BHL63BkEKFVuxBo6QRIv9848nRKRIuqmtYx0CR0D5T7bk26cAtyC0tC-zJeqPJCNM0CmCsgxVqb_pgy_Loqdr8s
-",
+  VAPID_PUBLIC_KEY: "BHL63BkEKFVuxBo6QRIv9848nRKRIuqmtYx0CR0D5T7bk26cAtyC0tC-zJeqPJCNM0CmCsgxVqb_pgy_Loqdr8s",
 
   // 채팅방 이름
   APP_NAME: "우리 가족",
