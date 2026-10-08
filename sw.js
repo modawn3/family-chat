@@ -1,6 +1,10 @@
 // 서비스 워커: 앱 화면 캐시 + 푸시 알림 표시
 // 앱 파일을 수정해서 다시 배포할 때는 아래 버전 숫자를 올려 주세요.
-const CACHE = "family-chat-v2";
+const CACHE = "family-chat-v3";
+// 받은 사진은 여기에 보관해서 다시 내려받지 않아요 (앱 버전이 바뀌어도 유지)
+const IMAGE_CACHE = "family-chat-images";
+const IMAGE_CACHE_MAX = 800; // 이보다 많으면 오래된 사진부터 기기에서 지움 (서버 사진은 그대로)
+const IMAGE_PATH = "/storage/v1/object/sign/chat-images/";
 const SHELL = [
   "./",
   "./index.html",
@@ -20,15 +24,51 @@ self.addEventListener("install", (event) => {
 self.addEventListener("activate", (event) => {
   event.waitUntil(
     caches.keys()
-      .then((keys) => Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k))))
+      .then((keys) => Promise.all(keys.filter((k) => k !== CACHE && k !== IMAGE_CACHE).map((k) => caches.delete(k))))
       .then(() => self.clients.claim()),
   );
 });
 
-// 같은 사이트 파일만: 네트워크 우선, 오프라인이면 캐시
+// 가족 사진: 주소의 일회용 토큰(?token=…)을 떼고 사진 경로로 저장 → 한 번 받으면 다시 안 받음
+async function cachedImage(req) {
+  const url = new URL(req.url);
+  const key = url.origin + url.pathname;
+  const cache = await caches.open(IMAGE_CACHE);
+  const hit = await cache.match(key);
+  if (hit) return hit;
+  const res = await fetch(req);
+  if (res.ok && res.type !== "opaque") {
+    await cache.put(key, res.clone());
+    trimImages(cache);
+  }
+  return res;
+}
+
+let trimming = false;
+async function trimImages(cache) {
+  if (trimming) return;
+  trimming = true;
+  try {
+    const keys = await cache.keys();
+    const extra = keys.length - IMAGE_CACHE_MAX;
+    for (let i = 0; i < extra; i++) await cache.delete(keys[i]); // 먼저 저장된 것부터
+  } finally {
+    trimming = false;
+  }
+}
+
 self.addEventListener("fetch", (event) => {
   const req = event.request;
-  if (req.method !== "GET" || new URL(req.url).origin !== self.location.origin) return;
+  if (req.method !== "GET") return;
+  const url = new URL(req.url);
+
+  if (url.pathname.includes(IMAGE_PATH)) {
+    event.respondWith(cachedImage(req).catch(() => fetch(req)));
+    return;
+  }
+
+  // 같은 사이트 파일만: 네트워크 우선, 오프라인이면 캐시
+  if (url.origin !== self.location.origin) return;
   event.respondWith(
     fetch(req)
       .then((res) => {

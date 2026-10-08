@@ -10,6 +10,10 @@ const PAGE = 50;
 const BUCKET = "chat-images";
 const MAX_IMAGE_SIDE = 1600;
 const IMAGE_QUALITY = 0.8;
+const THUMB_SIDE = 520;       // 채팅 화면용 미리보기 (보통 30~60KB)
+const THUMB_QUALITY = 0.72;
+const IMAGE_CACHE = "family-chat-images"; // sw.js 와 같은 이름
+let thumbColumnMissing = false;           // DB에 thumb_path 컬럼이 아직 없을 때
 const URL_TTL = 60 * 60 * 24 * 7;
 
 const isTouch = matchMedia("(pointer: coarse)").matches;
@@ -250,7 +254,8 @@ async function syncNewer() {
 }
 
 async function prefetchUrls(rows) {
-  const paths = [...new Set(rows.map((m) => m.image_path).filter((p) => p && !state.urls.has(p)))];
+  // 채팅에는 미리보기(thumb_path)만 받고, 큰 사진은 눌렀을 때 받아요
+  const paths = [...new Set(rows.map((m) => m.thumb_path || m.image_path).filter((p) => p && !state.urls.has(p)))];
   if (!paths.length) return;
   const { data, error } = await sb.storage.from(BUCKET).createSignedUrls(paths, URL_TTL);
   if (error) { console.warn(error); return; }
@@ -325,7 +330,9 @@ async function addMessages(rows) {
 }
 
 function removeMessage(id) {
-  if (!state.byId.has(id)) return;
+  const m = state.byId.get(id);
+  if (!m) return;
+  evictCachedImages(m);
   state.byId.delete(id);
   state.messages = state.messages.filter((m) => m.id !== id);
   const top = el.list.scrollTop;
@@ -395,10 +402,11 @@ function appendMessage(m, prev) {
     img.loading = "lazy";
     img.decoding = "async";
     if (m.image_width && m.image_height) img.style.aspectRatio = `${m.image_width} / ${m.image_height}`;
-    const url = state.urls.get(m.image_path);
+    img.crossOrigin = "anonymous"; // 기기 저장(서비스 워커 캐시)이 되도록
+    const url = state.urls.get(m.thumb_path || m.image_path);
     if (url) img.src = url;
     img.addEventListener("load", () => { if (isNearBottom(300)) el.list.scrollTop = el.list.scrollHeight; }, { once: true });
-    img.addEventListener("click", () => openLightbox(img.src));
+    img.addEventListener("click", () => openPhoto(m, img.src));
     bubble.append(img);
   }
   if (m.content && !card) {
@@ -640,13 +648,30 @@ async function sendImages(files) {
   for (const [i, file] of images.entries()) {
     toast(images.length > 1 ? `사진 보내는 중… (${i + 1}/${images.length})` : "사진 보내는 중…", 0);
     try {
-      const { blob, width, height } = await compressImage(file);
-      const path = `${state.me.id}/${crypto.randomUUID()}.jpg`;
+      const { blob, thumb, width, height } = await compressImage(file);
+      const id = crypto.randomUUID();
+      const path = `${state.me.id}/${id}.jpg`;
       const up = await sb.storage.from(BUCKET).upload(path, blob, { contentType: "image/jpeg", cacheControl: "31536000" });
       if (up.error) throw up.error;
-      const { data, error } = await sb.from("messages")
-        .insert({ image_path: path, image_width: width, image_height: height })
-        .select().single();
+
+      // 미리보기 사진 (실패해도 큰 사진만으로 보내요)
+      let thumbPath = null;
+      if (thumb && !thumbColumnMissing) {
+        const tp = `${state.me.id}/${id}_t.jpg`;
+        const upT = await sb.storage.from(BUCKET).upload(tp, thumb, { contentType: "image/jpeg", cacheControl: "31536000" });
+        if (!upT.error) thumbPath = tp;
+      }
+
+      const row = { image_path: path, image_width: width, image_height: height };
+      if (thumbPath) row.thumb_path = thumbPath;
+      let { data, error } = await sb.from("messages").insert(row).select().single();
+      if (error && thumbPath && /thumb_path/.test(error.message)) {
+        // DB에 thumb_path 컬럼이 아직 없으면 미리보기 없이 다시 보냄
+        thumbColumnMissing = true;
+        sb.storage.from(BUCKET).remove([thumbPath]);
+        delete row.thumb_path;
+        ({ data, error } = await sb.from("messages").insert(row).select().single());
+      }
       if (error) throw error;
       await addMessages([data]);
     } catch (e) {
@@ -658,24 +683,41 @@ async function sendImages(files) {
   hideToast();
 }
 
-// 사진 압축: 긴 변 1600px, JPEG 80% (보통 200~400KB)
+// 사진 압축: 큰 사진(긴 변 1600px, 보통 200~400KB) + 미리보기(긴 변 520px, 보통 30~60KB)
 async function compressImage(file) {
   const source = await decodeImage(file);
   const w0 = source.width, h0 = source.height;
-  const scale = Math.min(1, MAX_IMAGE_SIDE / Math.max(w0, h0));
-  const width = Math.max(1, Math.round(w0 * scale));
-  const height = Math.max(1, Math.round(h0 * scale));
-  const canvas = document.createElement("canvas");
-  canvas.width = width;
-  canvas.height = height;
-  const ctx = canvas.getContext("2d");
-  ctx.fillStyle = "#fff"; // 투명 PNG 배경
-  ctx.fillRect(0, 0, width, height);
-  ctx.drawImage(source, 0, 0, width, height);
-  source.close?.();
-  const blob = await new Promise((resolve, reject) =>
-    canvas.toBlob((b) => (b ? resolve(b) : reject(new Error("이미지 변환 실패"))), "image/jpeg", IMAGE_QUALITY));
-  return { blob, width, height };
+  const render = (maxSide, quality) => {
+    const scale = Math.min(1, maxSide / Math.max(w0, h0));
+    const w = Math.max(1, Math.round(w0 * scale));
+    const h = Math.max(1, Math.round(h0 * scale));
+    const canvas = document.createElement("canvas");
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext("2d");
+    ctx.fillStyle = "#fff"; // 투명 PNG 배경
+    ctx.fillRect(0, 0, w, h);
+    ctx.imageSmoothingQuality = "high";
+    ctx.drawImage(source, 0, 0, w, h);
+    return new Promise((resolve, reject) =>
+      canvas.toBlob((b) => (b ? resolve({ blob: b, w, h }) : reject(new Error("이미지 변환 실패"))), "image/jpeg", quality));
+  };
+  try {
+    const full = await render(MAX_IMAGE_SIDE, IMAGE_QUALITY);
+    const small = Math.max(w0, h0) > THUMB_SIDE * 1.3 ? await render(THUMB_SIDE, THUMB_QUALITY).catch(() => null) : null;
+    return { blob: full.blob, thumb: small?.blob ?? null, width: full.w, height: full.h };
+  } finally {
+    source.close?.();
+  }
+}
+
+// 삭제된 메시지의 사진은 기기 저장소에서도 지움
+function evictCachedImages(m) {
+  if (!m?.image_path || !("caches" in window)) return;
+  const base = `${CONFIG.SUPABASE_URL}/storage/v1/object/sign/${BUCKET}/`;
+  caches.open(IMAGE_CACHE).then((c) => {
+    for (const p of [m.image_path, m.thumb_path]) if (p) c.delete(base + p);
+  }).catch(() => {});
 }
 
 async function decodeImage(file) {
@@ -713,17 +755,32 @@ async function confirmDelete(m) {
   if (!confirm("이 메시지를 삭제할까요?")) return;
   const { error } = await sb.from("messages").delete().eq("id", m.id);
   if (error) return toast(`삭제하지 못했어요: ${error.message}`);
-  if (m.image_path) sb.storage.from(BUCKET).remove([m.image_path]);
+  if (m.image_path) sb.storage.from(BUCKET).remove([m.image_path, m.thumb_path].filter(Boolean));
   removeMessage(m.id);
 }
 
 // ---------------------------------------------------------------------
-// 사진 크게 보기
+// 사진 크게 보기: 미리보기를 먼저 보여주고, 큰 사진을 받으면 바꿔 끼움
 // ---------------------------------------------------------------------
-function openLightbox(src) {
-  if (!src) return;
-  $("img", el.lightbox).src = src;
+async function openPhoto(m, previewSrc) {
+  const big = $("img", el.lightbox);
+  big.crossOrigin = "anonymous";
+  if (previewSrc) big.src = previewSrc;
   el.lightbox.hidden = false;
+  if (!m.thumb_path) return; // 예전 사진은 이미 큰 사진
+
+  let url = state.urls.get(m.image_path);
+  if (!url) {
+    const { data, error } = await sb.storage.from(BUCKET).createSignedUrl(m.image_path, URL_TTL);
+    if (error || !data?.signedUrl) return;
+    url = data.signedUrl;
+    state.urls.set(m.image_path, url);
+  }
+  if (el.lightbox.hidden) return;
+  const loader = new Image();
+  loader.crossOrigin = "anonymous";
+  loader.onload = () => { if (!el.lightbox.hidden) big.src = url; };
+  loader.src = url;
 }
 el.lightbox.addEventListener("click", () => { el.lightbox.hidden = true; });
 document.addEventListener("keydown", (e) => {
