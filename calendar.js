@@ -26,7 +26,13 @@ export const diffDays = (a, b) => Math.round((toUTC(b) - toUTC(a)) / 86400000);
 export const dow = (s) => new Date(toUTC(s)).getUTCDay();
 const daysInMonth = (y, m) => new Date(Date.UTC(y, m, 0)).getUTCDate();
 export const todayStr = () => { const d = new Date(); return ymd(d.getFullYear(), d.getMonth() + 1, d.getDate()); };
-export const holidayOf = (s) => HOLIDAYS[s.slice(5)] || "";
+// 서버(public.holidays, 공휴일 자동 갱신 함수가 채움)에서 받은 공휴일. 있으면 이걸 먼저 씀 (설날·추석·대체공휴일 포함)
+const serverHolidays = new Map();
+export function setServerHolidays(rows) {
+  serverHolidays.clear();
+  for (const r of rows) serverHolidays.set(r.date, r.name);
+}
+export const holidayOf = (s) => serverHolidays.get(s) || HOLIDAYS[s.slice(5)] || "";
 
 // 일정 ev 가 [from, to] 기간에 걸치는 "시작 날짜" 목록 (반복 일정 포함)
 export function occurrences(ev, from, to) {

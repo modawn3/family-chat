@@ -1,6 +1,6 @@
 # 우리 가족 채팅 — Claude Code 작업 안내
 
-가족끼리만 쓰는 채팅 + 가족 달력 PWA. 빌드 과정 없는 순수 HTML/CSS/JS(ES 모듈) + Supabase.
+가족끼리만 쓰는 채팅 + 가족 달력 PWA + 개인 달력(`my/`, 예전 「나의 달력 메모장」을 합친 것). 빌드 과정 없는 순수 HTML/CSS/JS(ES 모듈) + Supabase.
 사용자는 한국어를 쓰며 개발 경험이 많지 않으므로, **설명과 안내는 한국어로, 단계별로 쉽게** 해 주세요.
 대시보드 작업(SQL 실행, Secrets 등)은 사용자가 직접 하므로 "어디를 눌러 무엇을 붙여넣는지"까지 안내합니다.
 
@@ -8,14 +8,15 @@
 
 | 항목 | 값 |
 |---|---|
-| 앱 주소 | https://modawn3.github.io/family-chat/ |
+| 앱 주소 | https://modawn3.github.io/family-chat/ (개인 달력: `/family-chat/my/`) |
 | GitHub 저장소 | `modawn3/family-chat` (Public), Pages: main 브랜치 / (root) |
 | Supabase 프로젝트 | ref `qgotxqbmcxulneqdjvav` (무료 플랜, 이름 family) |
 | 알림 함수 | Edge Function `send-push` (JWT 검증 꺼짐, `x-push-secret` 헤더로 보호) |
+| 공휴일·날씨 함수 | Edge Function `sync-holidays`, `sync-weather` (JWT 검증 꺼짐, `x-cron-secret` 헤더로 보호, pg_cron 이 `chat.call_cron_function()` 으로 호출) |
 | 사용 기기 | 안드로이드 폰 2, 갤럭시 탭, 아이패드(Safari 홈 화면 앱), 윈도우 노트북 여러 대 |
 
 **절대 저장소에 넣으면 안 되는 것**: Supabase service_role/secret 키, VAPID 비밀 키(43자),
-PUSH_SECRET, DB 비밀번호, 가족 실제 이메일. 저장소가 Public이고 GitHub Pages가 저장소의 모든 파일을 웹에 공개합니다.
+PUSH_SECRET, CRON_SECRET, HOLIDAY_API_KEY, DB 비밀번호, 가족 실제 이메일. 저장소가 Public이고 GitHub Pages가 저장소의 모든 파일을 웹에 공개합니다.
 - `config.js`는 저장소에만 있고(사용자가 직접 채움) 공개용 값만 들어 있음: Project URL, publishable 키, VAPID 공개 키(87자).
   이 파일은 덮어쓰지 마세요. `app.js`의 `secretKeyProblem()`이 비밀 키가 들어가면 앱을 멈추고 경고합니다.
 - 가족 명단(이메일)은 DB의 `chat.family_members`에만 있음. `supabase/schema.sql`의 명단은 예시 값으로 유지.
@@ -39,6 +40,11 @@ tools/vapid-keys.html           VAPID 키 생성 (브라우저에서 열기)
 tools/make-stickers.py          GIF → 움직이는 WebP 이모티콘 변환 + stickers.js 등록
 docs/SETUP.md                   처음 설치 안내서 (사용자용)
 docs/HISTORY.md                 지금까지의 결정과 이유, 겪은 문제
+docs/MERGE-CALENDAR.md          개인 달력을 이 프로젝트로 옮기는 안내서 (사용자용, 한 번만)
+my/index.html                   개인 달력(내 일정·메모·공휴일·날씨). 한 파일 앱, config.js 를 import, 같은 로그인
+my/manifest.json, my/icon-*.png 개인 달력을 따로 홈 화면에 설치할 때 쓰는 정보
+supabase/functions/sync-holidays, sync-weather   공휴일(공공데이터포털)·날씨(기상청) 갱신 함수
+supabase/move-calendar/*.sql    예전 개인 달력 프로젝트 → 이 프로젝트 자료 옮기기 (한 번만)
 ```
 
 ## 데이터 구조 (스키마 `chat`, 다른 앱과 섞이지 않게 분리)
@@ -55,6 +61,14 @@ docs/HISTORY.md                 지금까지의 결정과 이유, 겪은 문제
 - `push_subscriptions(endpoint PK, user_id, p256dh, auth)` — 함수(`save_push_subscription` 등)로만 접근
 - `app_config(key, value)` — `push_function_url`, `push_secret` (앱에서 읽기 불가)
 - 사진: Storage 버킷 `chat-images`(비공개), 경로 `<user_id>/<uuid>.jpg` + 미리보기 `<uuid>_t.jpg`
+
+### 개인 달력 (스키마 `public`, 예전 프로젝트와 이름·칸이 같음 → 위젯들은 주소·키만 바꾸면 됨)
+- `events(id uuid, user_id, date, title, start_time 'HH:MM'|null, end_time, cat work|personal|etc, note, updated_at)` — 본인 것만
+- `memos(id, user_id, title, body, cat, date|null, updated_at)` — 본인 것만, date 가 있으면 달력에도 표시
+- `holidays(date PK, name, source)`, `weather(date PK, code, wf, tmin, tmax, pop, src)` — 로그인한 사람은 읽기만, 함수가 씀
+- 가족 달력(`chat.events`)도 `public.holidays` 를 읽어 공휴일 표시(없으면 양력 고정 공휴일만)
+- 쓰기할 때 항상 `updated_at` 갱신 — 개인 달력은 "개수 + 최신 updated_at" 으로 변경 여부를 확인함
+- 같은 이름 `events` 가 `chat`(가족)과 `public`(개인)에 둘 다 있음. app.js 는 기본 스키마가 `chat` 이라 `public` 은 `sb.schema("public")` 으로
 
 보안: 모든 테이블 RLS, 판정 함수 `chat.is_family()`. `auth.users` 트리거 `on_auth_user_created_chat`가
 명단에 없는 이메일 가입을 **프로젝트 전체에서** 거부함(다른 앱을 같은 프로젝트에 넣을 때 주의).
@@ -96,15 +110,15 @@ Data API 화면의 "Exposed tables 0 of 6"은 의도된 것(권한을 직접 좁
 ## 마이그레이션 적용 현황 (2026-10-10 기준)
 
 `schema.sql`(일정 포함 버전) → `002_thumbnails` → `003_stickers` 모두 적용된 것으로 보임(이모티콘 정상 동작 확인됨).
+`004_my_calendar` 는 아직 적용 전(개인 달력 합치기, docs/MERGE-CALENDAR.md 순서대로 사용자가 진행).
 확인 SQL: `select column_name from information_schema.columns where table_schema='chat' and table_name='messages';`
 → `thumb_path`, `sticker`가 있으면 적용 완료.
 
 ## 앞으로 할 일 / 아이디어
 
-- **개인 일정 달력 앱과 합치기** (사용자의 다음 목표). 개인 달력은 **별도 Supabase 프로젝트**에 있는 기존 앱.
-  합치기 전에 사용자와 정할 것: 같은 Supabase 프로젝트로 옮길지(스키마 분리 예: `calendar`), 개인 일정의 공개 범위(나만/가족),
-  기존 `chat.events`(가족 일정)와의 관계, 로그인 계정 통합, 가입 거부 트리거가 개인 앱에 미치는 영향. 무료 플랜은 활성 프로젝트 2개 제한.
+- **개인 달력 합치기 마무리**: 위젯(안드로이드·바탕화면·아이패드)은 저장소 밖 사용자 PC 의 `문서/family-chat-my-clendar/my-calendar` 에 있음.
+  주소·키 교체와 재배포, 예전 사이트 이동 안내, 예전 프로젝트 정지는 사용자 확인 후 진행(MERGE-CALENDAR.md 5~6단계).
+- 가족 달력과 내 달력을 한 화면에 겹쳐 보기 (지금은 탭으로 나뉨)
 - 새 버전 감지 시 "새 버전이 있어요 — 눌러서 새로고침" 안내 (제안만 하고 아직 안 만듦)
 - 일정 당일 아침 푸시 알림 (pg_cron + send-push 확장, 제안만 함)
 - 사진 저장 공간이 차면 오래된 사진 정리 기능
-- 음력 명절(설날·추석)은 자동 표시 안 함 — 일정으로 등록하도록 안내 중
