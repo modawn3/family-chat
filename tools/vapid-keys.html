@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>알림 키 만들기</title>
+<style>
+  body { font-family: -apple-system, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif; max-width: 720px; margin: 32px auto; padding: 0 16px; color: #2B2622; background: #F7F2EB; line-height: 1.5; }
+  h1 { font-size: 22px; }
+  .box { background: #fff; border: 1px solid #E4DBCF; border-radius: 12px; padding: 14px 16px; margin: 12px 0; }
+  .name { font-weight: 700; font-size: 14px; }
+  .hint { color: #8A8077; font-size: 13px; margin: 2px 0 8px; }
+  code { display: block; word-break: break-all; font-size: 13px; background: #EFE8DE; padding: 8px 10px; border-radius: 8px; }
+  button { border: 0; border-radius: 8px; padding: 6px 12px; background: #D9733B; color: #fff; font-weight: 600; cursor: pointer; margin-top: 8px; }
+  .warn { color: #C4402F; font-size: 14px; }
+</style>
+</head>
+<body>
+<h1>푸시 알림 키 만들기</h1>
+<p>이 페이지를 열면 내 컴퓨터 안에서만 키가 만들어져요(인터넷으로 보내지 않음). 새로고침하면 새 키가 나오니, <b>한 번 만든 값을 메모장에 저장</b>해 두세요.</p>
+<p class="warn" id="err" hidden></p>
+<div id="out"></div>
+<script>
+const b64url = (buf) => btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+
+async function main() {
+  if (!window.crypto?.subtle) throw new Error("이 브라우저에서는 키를 만들 수 없어요. Chrome이나 Edge로 열어 주세요.");
+  const kp = await crypto.subtle.generateKey({ name: "ECDSA", namedCurve: "P-256" }, true, ["sign", "verify"]);
+  const pub = b64url(await crypto.subtle.exportKey("raw", kp.publicKey));
+  const priv = (await crypto.subtle.exportKey("jwk", kp.privateKey)).d;
+  const secret = b64url(crypto.getRandomValues(new Uint8Array(24)));
+
+  const rows = [
+    ["VAPID_PUBLIC_KEY", "공개 키 — config.js 와 Edge Function Secrets 두 곳에 넣어요", pub],
+    ["VAPID_PRIVATE_KEY", "비밀 키 — Edge Function Secrets 에만 넣어요 (다른 곳에 공개 금지)", priv],
+    ["PUSH_SECRET", "서버끼리 쓰는 암호 — Edge Function Secrets 와 SQL(app_config) 두 곳에 넣어요", secret],
+  ];
+  const out = document.getElementById("out");
+  for (const [name, hint, value] of rows) {
+    const box = document.createElement("div");
+    box.className = "box";
+    box.innerHTML = `<div class="name">${name}</div><div class="hint">${hint}</div>`;
+    const code = document.createElement("code");
+    code.textContent = value;
+    const btn = document.createElement("button");
+    btn.textContent = "복사";
+    btn.onclick = async () => { await navigator.clipboard.writeText(value); btn.textContent = "복사됨 ✓"; };
+    box.append(code, btn);
+    out.append(box);
+  }
+}
+main().catch((e) => { const el = document.getElementById("err"); el.textContent = e.message; el.hidden = false; });
+</script>
+</body>
+</html>
