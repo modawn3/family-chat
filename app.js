@@ -148,7 +148,7 @@ el.loginForm.addEventListener("submit", async (e) => {
 // ---------------------------------------------------------------------
 // 채팅 시작/종료
 // ---------------------------------------------------------------------
-async function startChat(user) {
+async function startChat(user, retried = false) {
   state.me = user;
   el.login.hidden = true;
   el.chat.hidden = false;
@@ -180,6 +180,14 @@ async function startChat(user) {
     await refreshBell();
     resyncPushSubscription();
   } catch (e) {
+    // 오래 안 쓴 브라우저에 남은 로그인이 만료됐거나 컴퓨터 시계가 늦으면 "JWT expired" 가 남
+    // → 로그인을 한 번 새로 받아서 다시 시도, 그래도 안 되면 로그인 화면으로
+    if (!retried && /jwt expired/i.test(e?.message || "")) {
+      const { data, error } = await sb.auth.refreshSession();
+      if (!error && data.session) return startChat(data.session.user, true);
+      await sb.auth.signOut({ scope: "local" });
+      return;
+    }
     console.error(e);
     toast(`불러오지 못했어요: ${e.message || e}`);
   }
