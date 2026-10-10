@@ -5,7 +5,7 @@
 //
 // 필요한 비밀 값 (Edge Functions > Secrets, 공휴일 함수와 같은 것을 같이 씀)
 //   HOLIDAY_API_KEY : 공공데이터포털 일반 인증키(Decoding)
-//   CRON_SECRET     : 예약 실행만 이 함수를 부를 수 있게 하는 암호
+//   CRON_SECRET     : (선택) 예약 실행 암호. 없으면 DB 의 chat.app_config 값을 씀
 // =========================================================
 import { createClient } from "npm:@supabase/supabase-js@2";
 
@@ -160,13 +160,21 @@ function summarizeMid(land: any, ta: any, tmFc: string): Row[] {
 }
 
 /* ---------- 실행 ---------- */
+// 예약 실행 암호: Secrets 의 CRON_SECRET, 없으면 DB 의 chat.app_config('cron_secret')
+// (예약 실행 SQL 도 같은 DB 값을 보내므로, 암호를 한 곳에만 두면 됨)
+async function cronSecret(supabase: ReturnType<typeof createClient>): Promise<string | null> {
+  const env = Deno.env.get("CRON_SECRET");
+  if (env) return env;
+  const { data } = await supabase.schema("chat").from("app_config").select("value").eq("key", "cron_secret").maybeSingle();
+  return data?.value ?? null;
+}
+
 Deno.serve(async (req) => {
-  const secret = Deno.env.get("CRON_SECRET");
+  const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+  const secret = await cronSecret(supabase);
   if (!secret || req.headers.get("x-cron-secret") !== secret) return new Response("forbidden", { status: 403 });
   const key = Deno.env.get("WEATHER_API_KEY") || Deno.env.get("HOLIDAY_API_KEY");
   if (!key) return new Response("HOLIDAY_API_KEY 비밀 값이 없어요", { status: 500 });
-
-  const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
   const now = kstNow();
   const today = ymd(now);
   const nowHHMM = pad(now.getUTCHours()) + "00";

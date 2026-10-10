@@ -24,15 +24,15 @@ SQL 을 붙여넣을 때는 이 안내서의 ``` 줄은 빼고 복사하세요.
 1. family 프로젝트 → **Edge Functions** → **Deploy a new function** → **Via Editor**
    - 이름 `sync-holidays`, 코드는 `supabase/functions/sync-holidays/index.ts` 를 붙여넣고 **Deploy**
    - 같은 방법으로 `sync-weather` (코드는 `supabase/functions/sync-weather/index.ts`)
-   - 두 함수 모두 JWT 검증(**Verify JWT**) 옵션을 **끄기** (예전 프로젝트와 같은 설정, 대신 CRON_SECRET 으로 보호)
-2. Edge Functions → **Secrets** 에 두 개 추가
+   - 두 함수 모두 JWT 검증(**Verify JWT**) 옵션을 **끄기** (예전 프로젝트와 같은 설정, 대신 예약 실행 암호로 보호)
+2. Edge Functions → **Secrets** 에 하나 추가
    - `HOLIDAY_API_KEY` : 공공데이터포털 → 마이페이지 → 활용신청 현황 → 일반 인증키(**Decoding**). 예전 프로젝트와 같은 값
-   - `CRON_SECRET` : 새로 만든 긴 암호 (예: 영문+숫자 32자). 아래 3단계에서 한 번 더 써요
-3. 위 `CRON_SECRET` 값을 DB 에도 넣고, 바로 한 번 실행해 보기 (SQL Editor, `여기에_암호` 를 바꿔서):
+3. 예약 실행 암호를 DB 에 만들고, 바로 한 번 실행해 보기 (SQL Editor). 암호는 DB 가 무작위로 만들고,
+   함수도 같은 DB 값을 읽어서 확인하므로 따로 적어 둘 필요가 없어요.
 
 ```sql
-insert into chat.app_config (key, value) values ('cron_secret', '여기에_암호')
-on conflict (key) do update set value = excluded.value;
+insert into chat.app_config (key, value) values ('cron_secret', encode(extensions.gen_random_bytes(24), 'hex'))
+on conflict (key) do nothing;
 select chat.call_cron_function('sync-holidays');
 select chat.call_cron_function('sync-weather');
 ```
@@ -44,8 +44,7 @@ select status_code, left(content::text, 120) as 결과, created
 from net._http_response order by created desc limit 2;
 ```
 
-`200` 이 두 줄 보이면 성공이에요. `403` 이면 Secrets 의 `CRON_SECRET` 과 DB 에 넣은 값이 다른 것,
-`500` 이면 `HOLIDAY_API_KEY` 문제예요.
+`200` 이 두 줄 보이면 성공이에요. `500` 에 "HOLIDAY_API_KEY 비밀 값이 없어요" 가 보이면 2번의 Secrets 를 확인하세요.
 
 ## 3단계. 일정·메모 옮기기
 

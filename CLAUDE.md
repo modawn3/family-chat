@@ -12,7 +12,7 @@
 | GitHub 저장소 | `modawn3/family-chat` (Public), Pages: main 브랜치 / (root) |
 | Supabase 프로젝트 | ref `qgotxqbmcxulneqdjvav` (무료 플랜, 이름 family) |
 | 알림 함수 | Edge Function `send-push` (JWT 검증 꺼짐, `x-push-secret` 헤더로 보호) |
-| 공휴일·날씨 함수 | Edge Function `sync-holidays`, `sync-weather` (JWT 검증 꺼짐, `x-cron-secret` 헤더로 보호, pg_cron 이 `chat.call_cron_function()` 으로 호출) |
+| 공휴일·날씨 함수 | Edge Function `sync-holidays`, `sync-weather` (JWT 검증 꺼짐, `x-cron-secret` 헤더로 보호 — 암호는 `chat.app_config('cron_secret')`, pg_cron 이 `chat.call_cron_function()` 으로 호출) |
 | 사용 기기 | 안드로이드 폰 2, 갤럭시 탭, 아이패드(Safari 홈 화면 앱), 윈도우 노트북 여러 대 |
 
 **절대 저장소에 넣으면 안 되는 것**: Supabase service_role/secret 키, VAPID 비밀 키(43자),
@@ -110,7 +110,8 @@ Data API 화면의 "Exposed tables 0 of 6"은 의도된 것(권한을 직접 좁
 ## 마이그레이션 적용 현황 (2026-10-10 기준)
 
 `schema.sql`(일정 포함 버전) → `002_thumbnails` → `003_stickers` 모두 적용된 것으로 보임(이모티콘 정상 동작 확인됨).
-`004_my_calendar` 는 아직 적용 전(개인 달력 합치기, docs/MERGE-CALENDAR.md 순서대로 사용자가 진행).
+`004_my_calendar` 는 2026-10-10 Claude 가 Supabase 연결로 적용(004a~e 로 나눠서), `cron_secret` 생성, 함수 2개 배포,
+예전 프로젝트의 일정 11개·메모 1개 복사까지 끝남. 남은 것: `HOLIDAY_API_KEY` Secrets(사용자), 위젯 주소 교체, 예전 프로젝트 정리.
 확인 SQL: `select column_name from information_schema.columns where table_schema='chat' and table_name='messages';`
 → `thumb_path`, `sticker`가 있으면 적용 완료.
 
