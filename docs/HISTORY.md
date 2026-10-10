@@ -57,3 +57,12 @@ from (select * from net._http_response order by created desc limit 5) r
 order by 1;
 ```
 상태 401=함수 JWT 검증 켜짐, 403=PUSH_SECRET 불일치, 404=함수 이름/주소, 500=VAPID Secrets 문제, 200 `"sent":0`=받을 기기 없음.
+
+## 7. 개인 달력 합치기 (2026-10-10)
+- 목표: Supabase 프로젝트 2개 → 1개(family), GitHub Pages 2개 → 1개(family-chat). 무료 플랜 활성 프로젝트 2개 제한을 비워 둠.
+- 개인 달력 테이블은 `chat` 이 아니라 **`public` 에 예전과 같은 이름·칸**으로 만듦 → 안드로이드·바탕화면·아이패드 위젯이
+  `/rest/v1/events` 등을 그대로 부르므로 주소·키만 바꾸면 됨(스키마를 바꾸면 위젯 코드와 APK 를 크게 고쳐야 했음).
+- 화면은 `my/` 하위 페이지로 거의 그대로 옮김(넓은 PC 화면용 디자인 유지). 같은 사이트·같은 Supabase 라 로그인이 공유됨.
+- 예약 실행 암호는 공개 저장소에 넣지 않으려고 SQL 에 쓰지 않고 `chat.app_config('cron_secret')` 에서 읽음.
+- 개인 일정·메모는 예전처럼 본인만. 공휴일 테이블은 가족 달력도 같이 써서 설날·추석이 자동 표시됨.
+

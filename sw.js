@@ -1,6 +1,6 @@
 // 서비스 워커: 앱 화면 캐시 + 푸시 알림 표시
 // 앱 파일을 수정해서 다시 배포할 때는 아래 버전 숫자를 올려 주세요.
-const CACHE = "family-chat-v4";
+const CACHE = "family-chat-v5";
 // 받은 사진은 여기에 보관해서 다시 내려받지 않아요 (앱 버전이 바뀌어도 유지)
 const IMAGE_CACHE = "family-chat-images";
 const IMAGE_CACHE_MAX = 800; // 이보다 많으면 오래된 사진부터 기기에서 지움 (서버 사진은 그대로)
@@ -16,6 +16,8 @@ const SHELL = [
   "./manifest.webmanifest",
   "./icons/icon-192.png",
   "./icons/badge-96.png",
+  "./my/",
+  "./my/index.html",
 ];
 
 self.addEventListener("install", (event) => {
@@ -92,7 +94,8 @@ self.addEventListener("fetch", (event) => {
         }
         return res;
       })
-      .catch(() => caches.match(req, { ignoreSearch: true }).then((r) => r || caches.match("./index.html"))),
+      .catch(() => caches.match(req, { ignoreSearch: true })
+        .then((r) => r || caches.match(url.pathname.includes("/my/") ? "./my/index.html" : "./index.html"))),
   );
 });
 

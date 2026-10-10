@@ -1,6 +1,6 @@
 import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
 import { CONFIG } from "./config.js";
-import { createCalendar, announceText, whenText, todayStr, timeText } from "./calendar.js";
+import { createCalendar, announceText, whenText, todayStr, timeText, setServerHolidays } from "./calendar.js";
 import { STICKERS, STICKER_VERSION } from "./stickers.js";
 
 const stickerById = new Map(STICKERS.map((s) => [s.id, s]));
@@ -170,6 +170,7 @@ async function startChat(user) {
       toast,
     });
     await cal.start();
+    loadHolidays();
     updateTodayStrip();
     await loadLatest();
     switchTab(savedTab());
@@ -182,6 +183,15 @@ async function startChat(user) {
     console.error(e);
     toast(`불러오지 못했어요: ${e.message || e}`);
   }
+}
+
+// 공휴일(설날·추석·대체공휴일 포함): 내 달력과 같은 public.holidays 테이블을 같이 씀.
+// 아직 테이블이 없으면(업데이트 4 전) 조용히 넘어가고 양력 고정 공휴일만 표시
+async function loadHolidays() {
+  const { data, error } = await sb.schema("public").from("holidays").select("date, name");
+  if (error || !data?.length) return;
+  setServerHolidays(data);
+  cal?.render();
 }
 
 function stopChat() {
