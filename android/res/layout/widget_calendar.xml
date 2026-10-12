@@ -1,0 +1,339 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@drawable/widget_bg"
+    android:padding="8dp">
+
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical" android:paddingLeft="4dp" android:paddingBottom="4dp">
+        <TextView android:id="@+id/title" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:textSize="17sp" android:textStyle="bold" android:textColor="@color/w_ink" android:maxLines="1" />
+        <TextView android:id="@+id/btn_prev" android:layout_width="30dp" android:layout_height="30dp" android:gravity="center" android:text="‹" android:textSize="18sp" android:textColor="@color/w_muted" />
+        <TextView android:id="@+id/btn_today" android:layout_width="wrap_content" android:layout_height="30dp" android:gravity="center" android:paddingLeft="6dp" android:paddingRight="6dp" android:text="오늘" android:textSize="12sp" android:textColor="@color/w_muted" />
+        <TextView android:id="@+id/btn_next" android:layout_width="30dp" android:layout_height="30dp" android:gravity="center" android:text="›" android:textSize="18sp" android:textColor="@color/w_muted" />
+        <TextView android:id="@+id/btn_refresh" android:layout_width="30dp" android:layout_height="30dp" android:gravity="center" android:text="⟳" android:textSize="15sp" android:textColor="@color/w_muted" />
+        <TextView android:id="@+id/btn_add" android:layout_width="30dp" android:layout_height="30dp" android:layout_marginLeft="2dp" android:gravity="center" android:background="@drawable/btn_bg" android:text="＋" android:textSize="16sp" android:textColor="@color/w_accent" />
+    </LinearLayout>
+
+    <TextView android:id="@+id/notice" android:layout_width="match_parent" android:layout_height="wrap_content" android:paddingLeft="4dp" android:paddingBottom="4dp" android:textSize="11sp" android:textColor="@color/w_holiday" android:visibility="gone" />
+
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:paddingBottom="2dp">
+            <TextView android:id="@+id/dow_0" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:paddingLeft="3dp" android:text="일" android:textSize="10sp" android:textColor="@color/w_holiday" />
+            <TextView android:id="@+id/dow_1" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:paddingLeft="3dp" android:text="월" android:textSize="10sp" android:textColor="@color/w_muted" />
+            <TextView android:id="@+id/dow_2" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:paddingLeft="3dp" android:text="화" android:textSize="10sp" android:textColor="@color/w_muted" />
+            <TextView android:id="@+id/dow_3" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:paddingLeft="3dp" android:text="수" android:textSize="10sp" android:textColor="@color/w_muted" />
+            <TextView android:id="@+id/dow_4" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:paddingLeft="3dp" android:text="목" android:textSize="10sp" android:textColor="@color/w_muted" />
+            <TextView android:id="@+id/dow_5" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:paddingLeft="3dp" android:text="금" android:textSize="10sp" android:textColor="@color/w_muted" />
+            <TextView android:id="@+id/dow_6" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:paddingLeft="3dp" android:text="토" android:textSize="10sp" android:textColor="@color/w_saturday" />
+    </LinearLayout>
+
+    <LinearLayout android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:orientation="vertical">
+        <LinearLayout android:id="@+id/row_0" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:orientation="horizontal">
+            <LinearLayout android:id="@+id/cell_0_0" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:orientation="vertical" android:paddingLeft="2dp" android:paddingRight="1dp" android:paddingTop="1dp" android:background="@drawable/cell_plain">
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
+                    <TextView android:id="@+id/day_0_0" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:textSize="11sp" android:textStyle="bold" android:maxLines="1" android:textColor="@color/w_ink" />
+                    <TextView android:id="@+id/wx_0_0" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textSize="9sp" android:maxLines="1" android:textColor="@color/w_muted" />
+                </LinearLayout>
+                <TextView android:id="@+id/items_0_0" android:layout_width="match_parent" android:layout_height="match_parent" android:textSize="8.5sp" android:lineSpacingMultiplier="0.95" android:ellipsize="end" android:textColor="@color/w_ink" />
+            </LinearLayout>
+            <LinearLayout android:id="@+id/cell_0_1" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:orientation="vertical" android:paddingLeft="2dp" android:paddingRight="1dp" android:paddingTop="1dp" android:background="@drawable/cell_plain">
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
+                    <TextView android:id="@+id/day_0_1" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:textSize="11sp" android:textStyle="bold" android:maxLines="1" android:textColor="@color/w_ink" />
+                    <TextView android:id="@+id/wx_0_1" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textSize="9sp" android:maxLines="1" android:textColor="@color/w_muted" />
+                </LinearLayout>
+                <TextView android:id="@+id/items_0_1" android:layout_width="match_parent" android:layout_height="match_parent" android:textSize="8.5sp" android:lineSpacingMultiplier="0.95" android:ellipsize="end" android:textColor="@color/w_ink" />
+            </LinearLayout>
+            <LinearLayout android:id="@+id/cell_0_2" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:orientation="vertical" android:paddingLeft="2dp" android:paddingRight="1dp" android:paddingTop="1dp" android:background="@drawable/cell_plain">
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
+                    <TextView android:id="@+id/day_0_2" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:textSize="11sp" android:textStyle="bold" android:maxLines="1" android:textColor="@color/w_ink" />
+                    <TextView android:id="@+id/wx_0_2" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textSize="9sp" android:maxLines="1" android:textColor="@color/w_muted" />
+                </LinearLayout>
+                <TextView android:id="@+id/items_0_2" android:layout_width="match_parent" android:layout_height="match_parent" android:textSize="8.5sp" android:lineSpacingMultiplier="0.95" android:ellipsize="end" android:textColor="@color/w_ink" />
+            </LinearLayout>
+            <LinearLayout android:id="@+id/cell_0_3" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:orientation="vertical" android:paddingLeft="2dp" android:paddingRight="1dp" android:paddingTop="1dp" android:background="@drawable/cell_plain">
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
+                    <TextView android:id="@+id/day_0_3" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:textSize="11sp" android:textStyle="bold" android:maxLines="1" android:textColor="@color/w_ink" />
+                    <TextView android:id="@+id/wx_0_3" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textSize="9sp" android:maxLines="1" android:textColor="@color/w_muted" />
+                </LinearLayout>
+                <TextView android:id="@+id/items_0_3" android:layout_width="match_parent" android:layout_height="match_parent" android:textSize="8.5sp" android:lineSpacingMultiplier="0.95" android:ellipsize="end" android:textColor="@color/w_ink" />
+            </LinearLayout>
+            <LinearLayout android:id="@+id/cell_0_4" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:orientation="vertical" android:paddingLeft="2dp" android:paddingRight="1dp" android:paddingTop="1dp" android:background="@drawable/cell_plain">
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
+                    <TextView android:id="@+id/day_0_4" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:textSize="11sp" android:textStyle="bold" android:maxLines="1" android:textColor="@color/w_ink" />
+                    <TextView android:id="@+id/wx_0_4" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textSize="9sp" android:maxLines="1" android:textColor="@color/w_muted" />
+                </LinearLayout>
+                <TextView android:id="@+id/items_0_4" android:layout_width="match_parent" android:layout_height="match_parent" android:textSize="8.5sp" android:lineSpacingMultiplier="0.95" android:ellipsize="end" android:textColor="@color/w_ink" />
+            </LinearLayout>
+            <LinearLayout android:id="@+id/cell_0_5" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:orientation="vertical" android:paddingLeft="2dp" android:paddingRight="1dp" android:paddingTop="1dp" android:background="@drawable/cell_plain">
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
+                    <TextView android:id="@+id/day_0_5" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:textSize="11sp" android:textStyle="bold" android:maxLines="1" android:textColor="@color/w_ink" />
+                    <TextView android:id="@+id/wx_0_5" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textSize="9sp" android:maxLines="1" android:textColor="@color/w_muted" />
+                </LinearLayout>
+                <TextView android:id="@+id/items_0_5" android:layout_width="match_parent" android:layout_height="match_parent" android:textSize="8.5sp" android:lineSpacingMultiplier="0.95" android:ellipsize="end" android:textColor="@color/w_ink" />
+            </LinearLayout>
+            <LinearLayout android:id="@+id/cell_0_6" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:orientation="vertical" android:paddingLeft="2dp" android:paddingRight="1dp" android:paddingTop="1dp" android:background="@drawable/cell_plain">
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
+                    <TextView android:id="@+id/day_0_6" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:textSize="11sp" android:textStyle="bold" android:maxLines="1" android:textColor="@color/w_ink" />
+                    <TextView android:id="@+id/wx_0_6" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textSize="9sp" android:maxLines="1" android:textColor="@color/w_muted" />
+                </LinearLayout>
+                <TextView android:id="@+id/items_0_6" android:layout_width="match_parent" android:layout_height="match_parent" android:textSize="8.5sp" android:lineSpacingMultiplier="0.95" android:ellipsize="end" android:textColor="@color/w_ink" />
+            </LinearLayout>
+        </LinearLayout>
+        <LinearLayout android:id="@+id/row_1" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:orientation="horizontal">
+            <LinearLayout android:id="@+id/cell_1_0" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:orientation="vertical" android:paddingLeft="2dp" android:paddingRight="1dp" android:paddingTop="1dp" android:background="@drawable/cell_plain">
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
+                    <TextView android:id="@+id/day_1_0" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:textSize="11sp" android:textStyle="bold" android:maxLines="1" android:textColor="@color/w_ink" />
+                    <TextView android:id="@+id/wx_1_0" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textSize="9sp" android:maxLines="1" android:textColor="@color/w_muted" />
+                </LinearLayout>
+                <TextView android:id="@+id/items_1_0" android:layout_width="match_parent" android:layout_height="match_parent" android:textSize="8.5sp" android:lineSpacingMultiplier="0.95" android:ellipsize="end" android:textColor="@color/w_ink" />
+            </LinearLayout>
+            <LinearLayout android:id="@+id/cell_1_1" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:orientation="vertical" android:paddingLeft="2dp" android:paddingRight="1dp" android:paddingTop="1dp" android:background="@drawable/cell_plain">
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
+                    <TextView android:id="@+id/day_1_1" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:textSize="11sp" android:textStyle="bold" android:maxLines="1" android:textColor="@color/w_ink" />
+                    <TextView android:id="@+id/wx_1_1" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textSize="9sp" android:maxLines="1" android:textColor="@color/w_muted" />
+                </LinearLayout>
+                <TextView android:id="@+id/items_1_1" android:layout_width="match_parent" android:layout_height="match_parent" android:textSize="8.5sp" android:lineSpacingMultiplier="0.95" android:ellipsize="end" android:textColor="@color/w_ink" />
+            </LinearLayout>
+            <LinearLayout android:id="@+id/cell_1_2" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:orientation="vertical" android:paddingLeft="2dp" android:paddingRight="1dp" android:paddingTop="1dp" android:background="@drawable/cell_plain">
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
+                    <TextView android:id="@+id/day_1_2" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:textSize="11sp" android:textStyle="bold" android:maxLines="1" android:textColor="@color/w_ink" />
+                    <TextView android:id="@+id/wx_1_2" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textSize="9sp" android:maxLines="1" android:textColor="@color/w_muted" />
+                </LinearLayout>
+                <TextView android:id="@+id/items_1_2" android:layout_width="match_parent" android:layout_height="match_parent" android:textSize="8.5sp" android:lineSpacingMultiplier="0.95" android:ellipsize="end" android:textColor="@color/w_ink" />
+            </LinearLayout>
+            <LinearLayout android:id="@+id/cell_1_3" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:orientation="vertical" android:paddingLeft="2dp" android:paddingRight="1dp" android:paddingTop="1dp" android:background="@drawable/cell_plain">
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
+                    <TextView android:id="@+id/day_1_3" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:textSize="11sp" android:textStyle="bold" android:maxLines="1" android:textColor="@color/w_ink" />
+                    <TextView android:id="@+id/wx_1_3" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textSize="9sp" android:maxLines="1" android:textColor="@color/w_muted" />
+                </LinearLayout>
+                <TextView android:id="@+id/items_1_3" android:layout_width="match_parent" android:layout_height="match_parent" android:textSize="8.5sp" android:lineSpacingMultiplier="0.95" android:ellipsize="end" android:textColor="@color/w_ink" />
+            </LinearLayout>
+            <LinearLayout android:id="@+id/cell_1_4" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:orientation="vertical" android:paddingLeft="2dp" android:paddingRight="1dp" android:paddingTop="1dp" android:background="@drawable/cell_plain">
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
+                    <TextView android:id="@+id/day_1_4" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:textSize="11sp" android:textStyle="bold" android:maxLines="1" android:textColor="@color/w_ink" />
+                    <TextView android:id="@+id/wx_1_4" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textSize="9sp" android:maxLines="1" android:textColor="@color/w_muted" />
+                </LinearLayout>
+                <TextView android:id="@+id/items_1_4" android:layout_width="match_parent" android:layout_height="match_parent" android:textSize="8.5sp" android:lineSpacingMultiplier="0.95" android:ellipsize="end" android:textColor="@color/w_ink" />
+            </LinearLayout>
+            <LinearLayout android:id="@+id/cell_1_5" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:orientation="vertical" android:paddingLeft="2dp" android:paddingRight="1dp" android:paddingTop="1dp" android:background="@drawable/cell_plain">
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
+                    <TextView android:id="@+id/day_1_5" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:textSize="11sp" android:textStyle="bold" android:maxLines="1" android:textColor="@color/w_ink" />
+                    <TextView android:id="@+id/wx_1_5" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textSize="9sp" android:maxLines="1" android:textColor="@color/w_muted" />
+                </LinearLayout>
+                <TextView android:id="@+id/items_1_5" android:layout_width="match_parent" android:layout_height="match_parent" android:textSize="8.5sp" android:lineSpacingMultiplier="0.95" android:ellipsize="end" android:textColor="@color/w_ink" />
+            </LinearLayout>
+            <LinearLayout android:id="@+id/cell_1_6" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:orientation="vertical" android:paddingLeft="2dp" android:paddingRight="1dp" android:paddingTop="1dp" android:background="@drawable/cell_plain">
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
+                    <TextView android:id="@+id/day_1_6" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:textSize="11sp" android:textStyle="bold" android:maxLines="1" android:textColor="@color/w_ink" />
+                    <TextView android:id="@+id/wx_1_6" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textSize="9sp" android:maxLines="1" android:textColor="@color/w_muted" />
+                </LinearLayout>
+                <TextView android:id="@+id/items_1_6" android:layout_width="match_parent" android:layout_height="match_parent" android:textSize="8.5sp" android:lineSpacingMultiplier="0.95" android:ellipsize="end" android:textColor="@color/w_ink" />
+            </LinearLayout>
+        </LinearLayout>
+        <LinearLayout android:id="@+id/row_2" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:orientation="horizontal">
+            <LinearLayout android:id="@+id/cell_2_0" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:orientation="vertical" android:paddingLeft="2dp" android:paddingRight="1dp" android:paddingTop="1dp" android:background="@drawable/cell_plain">
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
+                    <TextView android:id="@+id/day_2_0" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:textSize="11sp" android:textStyle="bold" android:maxLines="1" android:textColor="@color/w_ink" />
+                    <TextView android:id="@+id/wx_2_0" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textSize="9sp" android:maxLines="1" android:textColor="@color/w_muted" />
+                </LinearLayout>
+                <TextView android:id="@+id/items_2_0" android:layout_width="match_parent" android:layout_height="match_parent" android:textSize="8.5sp" android:lineSpacingMultiplier="0.95" android:ellipsize="end" android:textColor="@color/w_ink" />
+            </LinearLayout>
+            <LinearLayout android:id="@+id/cell_2_1" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:orientation="vertical" android:paddingLeft="2dp" android:paddingRight="1dp" android:paddingTop="1dp" android:background="@drawable/cell_plain">
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
+                    <TextView android:id="@+id/day_2_1" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:textSize="11sp" android:textStyle="bold" android:maxLines="1" android:textColor="@color/w_ink" />
+                    <TextView android:id="@+id/wx_2_1" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textSize="9sp" android:maxLines="1" android:textColor="@color/w_muted" />
+                </LinearLayout>
+                <TextView android:id="@+id/items_2_1" android:layout_width="match_parent" android:layout_height="match_parent" android:textSize="8.5sp" android:lineSpacingMultiplier="0.95" android:ellipsize="end" android:textColor="@color/w_ink" />
+            </LinearLayout>
+            <LinearLayout android:id="@+id/cell_2_2" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:orientation="vertical" android:paddingLeft="2dp" android:paddingRight="1dp" android:paddingTop="1dp" android:background="@drawable/cell_plain">
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
+                    <TextView android:id="@+id/day_2_2" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:textSize="11sp" android:textStyle="bold" android:maxLines="1" android:textColor="@color/w_ink" />
+                    <TextView android:id="@+id/wx_2_2" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textSize="9sp" android:maxLines="1" android:textColor="@color/w_muted" />
+                </LinearLayout>
+                <TextView android:id="@+id/items_2_2" android:layout_width="match_parent" android:layout_height="match_parent" android:textSize="8.5sp" android:lineSpacingMultiplier="0.95" android:ellipsize="end" android:textColor="@color/w_ink" />
+            </LinearLayout>
+            <LinearLayout android:id="@+id/cell_2_3" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:orientation="vertical" android:paddingLeft="2dp" android:paddingRight="1dp" android:paddingTop="1dp" android:background="@drawable/cell_plain">
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
+                    <TextView android:id="@+id/day_2_3" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:textSize="11sp" android:textStyle="bold" android:maxLines="1" android:textColor="@color/w_ink" />
+                    <TextView android:id="@+id/wx_2_3" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textSize="9sp" android:maxLines="1" android:textColor="@color/w_muted" />
+                </LinearLayout>
+                <TextView android:id="@+id/items_2_3" android:layout_width="match_parent" android:layout_height="match_parent" android:textSize="8.5sp" android:lineSpacingMultiplier="0.95" android:ellipsize="end" android:textColor="@color/w_ink" />
+            </LinearLayout>
+            <LinearLayout android:id="@+id/cell_2_4" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:orientation="vertical" android:paddingLeft="2dp" android:paddingRight="1dp" android:paddingTop="1dp" android:background="@drawable/cell_plain">
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
+                    <TextView android:id="@+id/day_2_4" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:textSize="11sp" android:textStyle="bold" android:maxLines="1" android:textColor="@color/w_ink" />
+                    <TextView android:id="@+id/wx_2_4" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textSize="9sp" android:maxLines="1" android:textColor="@color/w_muted" />
+                </LinearLayout>
+                <TextView android:id="@+id/items_2_4" android:layout_width="match_parent" android:layout_height="match_parent" android:textSize="8.5sp" android:lineSpacingMultiplier="0.95" android:ellipsize="end" android:textColor="@color/w_ink" />
+            </LinearLayout>
+            <LinearLayout android:id="@+id/cell_2_5" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:orientation="vertical" android:paddingLeft="2dp" android:paddingRight="1dp" android:paddingTop="1dp" android:background="@drawable/cell_plain">
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
+                    <TextView android:id="@+id/day_2_5" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:textSize="11sp" android:textStyle="bold" android:maxLines="1" android:textColor="@color/w_ink" />
+                    <TextView android:id="@+id/wx_2_5" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textSize="9sp" android:maxLines="1" android:textColor="@color/w_muted" />
+                </LinearLayout>
+                <TextView android:id="@+id/items_2_5" android:layout_width="match_parent" android:layout_height="match_parent" android:textSize="8.5sp" android:lineSpacingMultiplier="0.95" android:ellipsize="end" android:textColor="@color/w_ink" />
+            </LinearLayout>
+            <LinearLayout android:id="@+id/cell_2_6" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:orientation="vertical" android:paddingLeft="2dp" android:paddingRight="1dp" android:paddingTop="1dp" android:background="@drawable/cell_plain">
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
+                    <TextView android:id="@+id/day_2_6" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:textSize="11sp" android:textStyle="bold" android:maxLines="1" android:textColor="@color/w_ink" />
+                    <TextView android:id="@+id/wx_2_6" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textSize="9sp" android:maxLines="1" android:textColor="@color/w_muted" />
+                </LinearLayout>
+                <TextView android:id="@+id/items_2_6" android:layout_width="match_parent" android:layout_height="match_parent" android:textSize="8.5sp" android:lineSpacingMultiplier="0.95" android:ellipsize="end" android:textColor="@color/w_ink" />
+            </LinearLayout>
+        </LinearLayout>
+        <LinearLayout android:id="@+id/row_3" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:orientation="horizontal">
+            <LinearLayout android:id="@+id/cell_3_0" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:orientation="vertical" android:paddingLeft="2dp" android:paddingRight="1dp" android:paddingTop="1dp" android:background="@drawable/cell_plain">
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
+                    <TextView android:id="@+id/day_3_0" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:textSize="11sp" android:textStyle="bold" android:maxLines="1" android:textColor="@color/w_ink" />
+                    <TextView android:id="@+id/wx_3_0" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textSize="9sp" android:maxLines="1" android:textColor="@color/w_muted" />
+                </LinearLayout>
+                <TextView android:id="@+id/items_3_0" android:layout_width="match_parent" android:layout_height="match_parent" android:textSize="8.5sp" android:lineSpacingMultiplier="0.95" android:ellipsize="end" android:textColor="@color/w_ink" />
+            </LinearLayout>
+            <LinearLayout android:id="@+id/cell_3_1" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:orientation="vertical" android:paddingLeft="2dp" android:paddingRight="1dp" android:paddingTop="1dp" android:background="@drawable/cell_plain">
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
+                    <TextView android:id="@+id/day_3_1" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:textSize="11sp" android:textStyle="bold" android:maxLines="1" android:textColor="@color/w_ink" />
+                    <TextView android:id="@+id/wx_3_1" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textSize="9sp" android:maxLines="1" android:textColor="@color/w_muted" />
+                </LinearLayout>
+                <TextView android:id="@+id/items_3_1" android:layout_width="match_parent" android:layout_height="match_parent" android:textSize="8.5sp" android:lineSpacingMultiplier="0.95" android:ellipsize="end" android:textColor="@color/w_ink" />
+            </LinearLayout>
+            <LinearLayout android:id="@+id/cell_3_2" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:orientation="vertical" android:paddingLeft="2dp" android:paddingRight="1dp" android:paddingTop="1dp" android:background="@drawable/cell_plain">
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
+                    <TextView android:id="@+id/day_3_2" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:textSize="11sp" android:textStyle="bold" android:maxLines="1" android:textColor="@color/w_ink" />
+                    <TextView android:id="@+id/wx_3_2" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textSize="9sp" android:maxLines="1" android:textColor="@color/w_muted" />
+                </LinearLayout>
+                <TextView android:id="@+id/items_3_2" android:layout_width="match_parent" android:layout_height="match_parent" android:textSize="8.5sp" android:lineSpacingMultiplier="0.95" android:ellipsize="end" android:textColor="@color/w_ink" />
+            </LinearLayout>
+            <LinearLayout android:id="@+id/cell_3_3" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:orientation="vertical" android:paddingLeft="2dp" android:paddingRight="1dp" android:paddingTop="1dp" android:background="@drawable/cell_plain">
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
+                    <TextView android:id="@+id/day_3_3" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:textSize="11sp" android:textStyle="bold" android:maxLines="1" android:textColor="@color/w_ink" />
+                    <TextView android:id="@+id/wx_3_3" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textSize="9sp" android:maxLines="1" android:textColor="@color/w_muted" />
+                </LinearLayout>
+                <TextView android:id="@+id/items_3_3" android:layout_width="match_parent" android:layout_height="match_parent" android:textSize="8.5sp" android:lineSpacingMultiplier="0.95" android:ellipsize="end" android:textColor="@color/w_ink" />
+            </LinearLayout>
+            <LinearLayout android:id="@+id/cell_3_4" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:orientation="vertical" android:paddingLeft="2dp" android:paddingRight="1dp" android:paddingTop="1dp" android:background="@drawable/cell_plain">
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
+                    <TextView android:id="@+id/day_3_4" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:textSize="11sp" android:textStyle="bold" android:maxLines="1" android:textColor="@color/w_ink" />
+                    <TextView android:id="@+id/wx_3_4" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textSize="9sp" android:maxLines="1" android:textColor="@color/w_muted" />
+                </LinearLayout>
+                <TextView android:id="@+id/items_3_4" android:layout_width="match_parent" android:layout_height="match_parent" android:textSize="8.5sp" android:lineSpacingMultiplier="0.95" android:ellipsize="end" android:textColor="@color/w_ink" />
+            </LinearLayout>
+            <LinearLayout android:id="@+id/cell_3_5" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:orientation="vertical" android:paddingLeft="2dp" android:paddingRight="1dp" android:paddingTop="1dp" android:background="@drawable/cell_plain">
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
+                    <TextView android:id="@+id/day_3_5" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:textSize="11sp" android:textStyle="bold" android:maxLines="1" android:textColor="@color/w_ink" />
+                    <TextView android:id="@+id/wx_3_5" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textSize="9sp" android:maxLines="1" android:textColor="@color/w_muted" />
+                </LinearLayout>
+                <TextView android:id="@+id/items_3_5" android:layout_width="match_parent" android:layout_height="match_parent" android:textSize="8.5sp" android:lineSpacingMultiplier="0.95" android:ellipsize="end" android:textColor="@color/w_ink" />
+            </LinearLayout>
+            <LinearLayout android:id="@+id/cell_3_6" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:orientation="vertical" android:paddingLeft="2dp" android:paddingRight="1dp" android:paddingTop="1dp" android:background="@drawable/cell_plain">
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
+                    <TextView android:id="@+id/day_3_6" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:textSize="11sp" android:textStyle="bold" android:maxLines="1" android:textColor="@color/w_ink" />
+                    <TextView android:id="@+id/wx_3_6" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textSize="9sp" android:maxLines="1" android:textColor="@color/w_muted" />
+                </LinearLayout>
+                <TextView android:id="@+id/items_3_6" android:layout_width="match_parent" android:layout_height="match_parent" android:textSize="8.5sp" android:lineSpacingMultiplier="0.95" android:ellipsize="end" android:textColor="@color/w_ink" />
+            </LinearLayout>
+        </LinearLayout>
+        <LinearLayout android:id="@+id/row_4" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:orientation="horizontal">
+            <LinearLayout android:id="@+id/cell_4_0" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:orientation="vertical" android:paddingLeft="2dp" android:paddingRight="1dp" android:paddingTop="1dp" android:background="@drawable/cell_plain">
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
+                    <TextView android:id="@+id/day_4_0" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:textSize="11sp" android:textStyle="bold" android:maxLines="1" android:textColor="@color/w_ink" />
+                    <TextView android:id="@+id/wx_4_0" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textSize="9sp" android:maxLines="1" android:textColor="@color/w_muted" />
+                </LinearLayout>
+                <TextView android:id="@+id/items_4_0" android:layout_width="match_parent" android:layout_height="match_parent" android:textSize="8.5sp" android:lineSpacingMultiplier="0.95" android:ellipsize="end" android:textColor="@color/w_ink" />
+            </LinearLayout>
+            <LinearLayout android:id="@+id/cell_4_1" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:orientation="vertical" android:paddingLeft="2dp" android:paddingRight="1dp" android:paddingTop="1dp" android:background="@drawable/cell_plain">
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
+                    <TextView android:id="@+id/day_4_1" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:textSize="11sp" android:textStyle="bold" android:maxLines="1" android:textColor="@color/w_ink" />
+                    <TextView android:id="@+id/wx_4_1" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textSize="9sp" android:maxLines="1" android:textColor="@color/w_muted" />
+                </LinearLayout>
+                <TextView android:id="@+id/items_4_1" android:layout_width="match_parent" android:layout_height="match_parent" android:textSize="8.5sp" android:lineSpacingMultiplier="0.95" android:ellipsize="end" android:textColor="@color/w_ink" />
+            </LinearLayout>
+            <LinearLayout android:id="@+id/cell_4_2" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:orientation="vertical" android:paddingLeft="2dp" android:paddingRight="1dp" android:paddingTop="1dp" android:background="@drawable/cell_plain">
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
+                    <TextView android:id="@+id/day_4_2" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:textSize="11sp" android:textStyle="bold" android:maxLines="1" android:textColor="@color/w_ink" />
+                    <TextView android:id="@+id/wx_4_2" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textSize="9sp" android:maxLines="1" android:textColor="@color/w_muted" />
+                </LinearLayout>
+                <TextView android:id="@+id/items_4_2" android:layout_width="match_parent" android:layout_height="match_parent" android:textSize="8.5sp" android:lineSpacingMultiplier="0.95" android:ellipsize="end" android:textColor="@color/w_ink" />
+            </LinearLayout>
+            <LinearLayout android:id="@+id/cell_4_3" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:orientation="vertical" android:paddingLeft="2dp" android:paddingRight="1dp" android:paddingTop="1dp" android:background="@drawable/cell_plain">
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
+                    <TextView android:id="@+id/day_4_3" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:textSize="11sp" android:textStyle="bold" android:maxLines="1" android:textColor="@color/w_ink" />
+                    <TextView android:id="@+id/wx_4_3" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textSize="9sp" android:maxLines="1" android:textColor="@color/w_muted" />
+                </LinearLayout>
+                <TextView android:id="@+id/items_4_3" android:layout_width="match_parent" android:layout_height="match_parent" android:textSize="8.5sp" android:lineSpacingMultiplier="0.95" android:ellipsize="end" android:textColor="@color/w_ink" />
+            </LinearLayout>
+            <LinearLayout android:id="@+id/cell_4_4" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:orientation="vertical" android:paddingLeft="2dp" android:paddingRight="1dp" android:paddingTop="1dp" android:background="@drawable/cell_plain">
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
+                    <TextView android:id="@+id/day_4_4" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:textSize="11sp" android:textStyle="bold" android:maxLines="1" android:textColor="@color/w_ink" />
+                    <TextView android:id="@+id/wx_4_4" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textSize="9sp" android:maxLines="1" android:textColor="@color/w_muted" />
+                </LinearLayout>
+                <TextView android:id="@+id/items_4_4" android:layout_width="match_parent" android:layout_height="match_parent" android:textSize="8.5sp" android:lineSpacingMultiplier="0.95" android:ellipsize="end" android:textColor="@color/w_ink" />
+            </LinearLayout>
+            <LinearLayout android:id="@+id/cell_4_5" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:orientation="vertical" android:paddingLeft="2dp" android:paddingRight="1dp" android:paddingTop="1dp" android:background="@drawable/cell_plain">
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
+                    <TextView android:id="@+id/day_4_5" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:textSize="11sp" android:textStyle="bold" android:maxLines="1" android:textColor="@color/w_ink" />
+                    <TextView android:id="@+id/wx_4_5" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textSize="9sp" android:maxLines="1" android:textColor="@color/w_muted" />
+                </LinearLayout>
+                <TextView android:id="@+id/items_4_5" android:layout_width="match_parent" android:layout_height="match_parent" android:textSize="8.5sp" android:lineSpacingMultiplier="0.95" android:ellipsize="end" android:textColor="@color/w_ink" />
+            </LinearLayout>
+            <LinearLayout android:id="@+id/cell_4_6" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:orientation="vertical" android:paddingLeft="2dp" android:paddingRight="1dp" android:paddingTop="1dp" android:background="@drawable/cell_plain">
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
+                    <TextView android:id="@+id/day_4_6" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:textSize="11sp" android:textStyle="bold" android:maxLines="1" android:textColor="@color/w_ink" />
+                    <TextView android:id="@+id/wx_4_6" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textSize="9sp" android:maxLines="1" android:textColor="@color/w_muted" />
+                </LinearLayout>
+                <TextView android:id="@+id/items_4_6" android:layout_width="match_parent" android:layout_height="match_parent" android:textSize="8.5sp" android:lineSpacingMultiplier="0.95" android:ellipsize="end" android:textColor="@color/w_ink" />
+            </LinearLayout>
+        </LinearLayout>
+        <LinearLayout android:id="@+id/row_5" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:orientation="horizontal">
+            <LinearLayout android:id="@+id/cell_5_0" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:orientation="vertical" android:paddingLeft="2dp" android:paddingRight="1dp" android:paddingTop="1dp" android:background="@drawable/cell_plain">
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
+                    <TextView android:id="@+id/day_5_0" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:textSize="11sp" android:textStyle="bold" android:maxLines="1" android:textColor="@color/w_ink" />
+                    <TextView android:id="@+id/wx_5_0" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textSize="9sp" android:maxLines="1" android:textColor="@color/w_muted" />
+                </LinearLayout>
+                <TextView android:id="@+id/items_5_0" android:layout_width="match_parent" android:layout_height="match_parent" android:textSize="8.5sp" android:lineSpacingMultiplier="0.95" android:ellipsize="end" android:textColor="@color/w_ink" />
+            </LinearLayout>
+            <LinearLayout android:id="@+id/cell_5_1" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:orientation="vertical" android:paddingLeft="2dp" android:paddingRight="1dp" android:paddingTop="1dp" android:background="@drawable/cell_plain">
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
+                    <TextView android:id="@+id/day_5_1" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:textSize="11sp" android:textStyle="bold" android:maxLines="1" android:textColor="@color/w_ink" />
+                    <TextView android:id="@+id/wx_5_1" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textSize="9sp" android:maxLines="1" android:textColor="@color/w_muted" />
+                </LinearLayout>
+                <TextView android:id="@+id/items_5_1" android:layout_width="match_parent" android:layout_height="match_parent" android:textSize="8.5sp" android:lineSpacingMultiplier="0.95" android:ellipsize="end" android:textColor="@color/w_ink" />
+            </LinearLayout>
+            <LinearLayout android:id="@+id/cell_5_2" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:orientation="vertical" android:paddingLeft="2dp" android:paddingRight="1dp" android:paddingTop="1dp" android:background="@drawable/cell_plain">
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
+                    <TextView android:id="@+id/day_5_2" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:textSize="11sp" android:textStyle="bold" android:maxLines="1" android:textColor="@color/w_ink" />
+                    <TextView android:id="@+id/wx_5_2" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textSize="9sp" android:maxLines="1" android:textColor="@color/w_muted" />
+                </LinearLayout>
+                <TextView android:id="@+id/items_5_2" android:layout_width="match_parent" android:layout_height="match_parent" android:textSize="8.5sp" android:lineSpacingMultiplier="0.95" android:ellipsize="end" android:textColor="@color/w_ink" />
+            </LinearLayout>
+            <LinearLayout android:id="@+id/cell_5_3" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:orientation="vertical" android:paddingLeft="2dp" android:paddingRight="1dp" android:paddingTop="1dp" android:background="@drawable/cell_plain">
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
+                    <TextView android:id="@+id/day_5_3" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:textSize="11sp" android:textStyle="bold" android:maxLines="1" android:textColor="@color/w_ink" />
+                    <TextView android:id="@+id/wx_5_3" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textSize="9sp" android:maxLines="1" android:textColor="@color/w_muted" />
+                </LinearLayout>
+                <TextView android:id="@+id/items_5_3" android:layout_width="match_parent" android:layout_height="match_parent" android:textSize="8.5sp" android:lineSpacingMultiplier="0.95" android:ellipsize="end" android:textColor="@color/w_ink" />
+            </LinearLayout>
+            <LinearLayout android:id="@+id/cell_5_4" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:orientation="vertical" android:paddingLeft="2dp" android:paddingRight="1dp" android:paddingTop="1dp" android:background="@drawable/cell_plain">
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
+                    <TextView android:id="@+id/day_5_4" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:textSize="11sp" android:textStyle="bold" android:maxLines="1" android:textColor="@color/w_ink" />
+                    <TextView android:id="@+id/wx_5_4" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textSize="9sp" android:maxLines="1" android:textColor="@color/w_muted" />
+                </LinearLayout>
+                <TextView android:id="@+id/items_5_4" android:layout_width="match_parent" android:layout_height="match_parent" android:textSize="8.5sp" android:lineSpacingMultiplier="0.95" android:ellipsize="end" android:textColor="@color/w_ink" />
+            </LinearLayout>
+            <LinearLayout android:id="@+id/cell_5_5" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:orientation="vertical" android:paddingLeft="2dp" android:paddingRight="1dp" android:paddingTop="1dp" android:background="@drawable/cell_plain">
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
+                    <TextView android:id="@+id/day_5_5" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:textSize="11sp" android:textStyle="bold" android:maxLines="1" android:textColor="@color/w_ink" />
+                    <TextView android:id="@+id/wx_5_5" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textSize="9sp" android:maxLines="1" android:textColor="@color/w_muted" />
+                </LinearLayout>
+                <TextView android:id="@+id/items_5_5" android:layout_width="match_parent" android:layout_height="match_parent" android:textSize="8.5sp" android:lineSpacingMultiplier="0.95" android:ellipsize="end" android:textColor="@color/w_ink" />
+            </LinearLayout>
+            <LinearLayout android:id="@+id/cell_5_6" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:orientation="vertical" android:paddingLeft="2dp" android:paddingRight="1dp" android:paddingTop="1dp" android:background="@drawable/cell_plain">
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
+                    <TextView android:id="@+id/day_5_6" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:textSize="11sp" android:textStyle="bold" android:maxLines="1" android:textColor="@color/w_ink" />
+                    <TextView android:id="@+id/wx_5_6" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textSize="9sp" android:maxLines="1" android:textColor="@color/w_muted" />
+                </LinearLayout>
+                <TextView android:id="@+id/items_5_6" android:layout_width="match_parent" android:layout_height="match_parent" android:textSize="8.5sp" android:lineSpacingMultiplier="0.95" android:ellipsize="end" android:textColor="@color/w_ink" />
+            </LinearLayout>
+        </LinearLayout>
+    </LinearLayout>
+</LinearLayout>

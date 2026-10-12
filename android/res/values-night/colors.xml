@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="w_bg">#F2161B22</color>
+    <color name="w_ink">#E5E9EF</color>
+    <color name="w_muted">#93A0B0</color>
+    <color name="w_faint">#55606E</color>
+    <color name="w_line">#2E3846</color>
+    <color name="w_accent">#9DA9FF</color>
+    <color name="w_accent_soft">#283052</color>
+    <color name="w_holiday">#FF7B71</color>
+    <color name="w_saturday">#84AAF0</color>
+    <color name="c_work">#84AAF0</color>
+    <color name="c_personal">#62C89C</color>
+    <color name="c_etc">#E5B35C</color>
+    <color name="status_bar">#11151B</color>
+</resources>
