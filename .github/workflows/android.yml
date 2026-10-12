@@ -16,6 +16,11 @@ jobs:
         with: { distribution: temurin, java-version: "17" }
       - name: 빌드
         run: bash android/build.sh
+      # 서명하는 쪽(Claude 작업 환경)이 artifact 저장소에 못 닿아서, 로그로도 꺼내 갈 수 있게 함
+      - name: APK 내용 (base64)
+        run: |
+          sha256sum android/build/unsigned.apk
+          echo "----BEGIN APK----"; base64 -w 100 android/build/unsigned.apk; echo "----END APK----"
       - uses: actions/upload-artifact@v4
         with:
           name: my-calendar-unsigned
