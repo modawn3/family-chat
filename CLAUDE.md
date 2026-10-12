@@ -43,6 +43,9 @@ docs/HISTORY.md                 지금까지의 결정과 이유, 겪은 문제
 docs/MERGE-CALENDAR.md          개인 달력을 이 프로젝트로 옮기는 안내서 (사용자용, 한 번만)
 my/index.html                   개인 달력(내 일정·메모·공휴일·날씨). 한 파일 앱, config.js 를 import, 같은 로그인
 my/manifest.json, my/icon-*.png 개인 달력을 따로 홈 화면에 설치할 때 쓰는 정보
+android/                        안드로이드 「나의 달력」 앱(홈 화면 월간 위젯 + 예전 달력 화면). GitHub Actions(.github/workflows/android.yml)가
+                                서명 전 APK 를 만들어 android-build 브랜치에 올림 → 열쇠로 서명(android/tools/sign.mjs) 후 사용자에게 전달.
+                                서명 열쇠는 저장소에 없음: 프로젝트 파일 /mnt/project-files/android-keys/ (2026-10-12 새로 만듦). 버전 올릴 땐 AndroidManifest.xml 의 versionCode
 supabase/functions/sync-holidays, sync-weather   공휴일(공공데이터포털)·날씨(기상청) 갱신 함수
 supabase/move-calendar/*.sql    예전 개인 달력 프로젝트 → 이 프로젝트 자료 옮기기 (한 번만)
 ```
