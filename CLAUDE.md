@@ -26,6 +26,7 @@ PUSH_SECRET, CRON_SECRET, HOLIDAY_API_KEY, DB 비밀번호, 가족 실제 이메
 ```
 index.html          화면 뼈대 (로그인 / 채팅·달력 탭 / 일정 편집 dialog)
 app.js              로그인, 채팅, 사진, 읽음 표시, 알림 구독, 탭, 이모티콘, 설치 안내
+repeat.js           내 달력 고정(반복) 일정 날짜 계산 seriesDates() — node 로 테스트 가능
 calendar.js         달력(월 보기, 반복 일정 계산 occurrences(), 일정 편집) — 순수 날짜 함수는 export 되어 있어 node로 테스트 가능
 stickers.js         이모티콘 목록 (+ STICKER_VERSION)
 stickers/*.webp     이모티콘 파일 (tools/make-stickers.py 로 생성)
@@ -65,6 +66,8 @@ supabase/move-calendar/*.sql    예전 개인 달력 프로젝트 → 이 프로
 ### 개인 달력 (스키마 `public`, 예전 프로젝트와 이름·칸이 같음 → 위젯들은 주소·키만 바꾸면 됨)
 - `events(id uuid, user_id, date, title, start_time 'HH:MM'|null, end_time, cat work|personal|etc, note, updated_at)` — 본인 것만
 - `memos(id, user_id, title, body, cat, date|null, updated_at)` — 본인 것만, date 가 있으면 달력에도 표시
+- `event_series(id, user_id, kind weekly|monthly|yearly|lunar_yearly, weekdays smallint[], start_date, until, made_until, title, start_time, end_time, cat, note)` — 고정(반복) 일정 규칙(업데이트 005).
+  실제 날짜는 `events` 에 하루 한 줄씩(`series_id`, id 는 반복 id+날짜로 정해짐) 약 400일치 만들어 두고, 내 달력이 열릴 때 `Repeat.extend()` 가 이어 만듦 → 위젯은 고칠 필요 없음
 - `holidays(date PK, name, source)`, `weather(date PK, code, wf, tmin, tmax, pop, src)` — 로그인한 사람은 읽기만, 함수가 씀
 - 가족 달력(`chat.events`)도 `public.holidays` 를 읽어 공휴일 표시(없으면 양력 고정 공휴일만)
 - 쓰기할 때 항상 `updated_at` 갱신 — 개인 달력은 "개수 + 최신 updated_at" 으로 변경 여부를 확인함
