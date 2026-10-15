@@ -168,10 +168,10 @@ a.btn { color: var(--ink); text-decoration: none; display: inline-flex; align-it
 .todo .n { font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .todo .n .late { color: var(--holiday); font-weight: 600; }
 .todo.done .t { text-decoration: line-through; color: var(--muted); font-weight: 400; }
-.todo-done { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 13px; color: var(--muted); }
+.todo-done summary { cursor: pointer; font-size: 13px; color: var(--muted); padding: 4px 0; }
+.todo-done[open] summary { margin-bottom: 6px; }
+.todo-done .btn { margin-top: 8px; }
 .todo-chip::before { content: "☐ "; }
-.todo-chip.done::before { content: "☑ "; }
-.todo-chip.done { text-decoration: line-through; opacity: .6; }
 #todoDue[aria-invalid="true"] { border-color: var(--holiday); }
 .empty { color: var(--muted); font-size: 13px; padding: 14px; border: 1px dashed var(--line); border-radius: 8px; text-align: center; }
 
@@ -317,10 +317,11 @@ html, body { margin: 0; }
     <!-- 할 일 탭 -->
     <div class="pane" id="paneTodo" hidden>
       <div class="list" id="todoList"></div>
-      <div class="todo-done" id="todoDoneBox" hidden>
-        <span id="todoDoneSum"></span>
+      <details class="todo-done" id="todoDoneBox" hidden>
+        <summary id="todoDoneSum"></summary>
+        <div class="list" id="todoDoneList"></div>
         <button type="button" class="btn danger" id="todoClear">완료한 일 모두 지우기</button>
-      </div>
+      </details>
       <form class="editor" id="todoForm" autocomplete="off">
         <h3 id="todoFormTitle">새 할 일</h3>
         <div class="field"><label for="todoTitle">할 일</label><input type="text" id="todoTitle" placeholder="예: 보고서 제출" required maxlength="120"></div>
@@ -712,8 +713,7 @@ function memosOn(dateStr) {
   return state.memos.filter(m => m.date === dateStr && state.filter[m.cat] !== false);
 }
 function todosOn(dateStr) {
-  return state.todos.filter(t => t.due === dateStr && state.filter[t.cat] !== false)
-    .sort((a, b) => a.done - b.done);
+  return state.todos.filter(t => !t.done && t.due === dateStr && state.filter[t.cat] !== false);
 }
 const memoLabel = m => m.title || (m.body || "").split("\n")[0] || "제목 없음";
 
@@ -770,7 +770,7 @@ function renderCalendar() {
 
     const chips = [
       ...evs.map(e => ({ cls: "ev", cat: e.cat, text: (e.start ? e.start + " " : "") + e.title })),
-      ...tds.map(t => ({ cls: "ev todo-chip" + (t.done ? " done" : ""), cat: t.cat, text: t.title })),
+      ...tds.map(t => ({ cls: "ev todo-chip", cat: t.cat, text: t.title })),
       ...mms.map(m => ({ cls: "ev memo-chip", cat: m.cat, text: "메모 · " + memoLabel(m) }))
     ];
     chips.slice(0, 3).forEach(c => {
@@ -827,8 +827,7 @@ function renderDay() {
     const b = document.createElement("button");
     b.type = "button"; b.className = "item"; b.style.setProperty("--c", catColor(t.cat));
     const tm = document.createElement("span"); tm.className = "time"; tm.textContent = "할 일";
-    const title = document.createElement("span"); title.className = "t"; title.textContent = (t.done ? "☑ " : "☐ ") + t.title;
-    if (t.done) { title.style.textDecoration = "line-through"; title.style.color = "var(--muted)"; }
+    const title = document.createElement("span"); title.className = "t"; title.textContent = "☐ " + t.title;
     const note = document.createElement("span"); note.className = "n"; note.textContent = "마감 · " + (CATS.find(c => c.id === t.cat) || CATS[2]).name + (t.note ? " · " + t.note.split("\n")[0] : "");
     b.append(tm, title, note);
     b.addEventListener("click", () => { switchTab("todo"); editTodo(t.id); });
@@ -913,14 +912,14 @@ function todoRow(t) {
 }
 function renderTodos() {
   const vis = state.todos.filter(t => state.filter[t.cat] !== false);
-  // 완료한 일도 그 자리에 줄을 그은 채 남겨 둠 (마감 빠른 순, 마감 없는 일은 뒤)
-  const all = vis.slice().sort((a, b) => (a.due || "9999").localeCompare(b.due || "9999") || a.createdAt - b.createdAt);
-  const open = all.filter(t => !t.done), done = all.filter(t => t.done);
+  const open = vis.filter(t => !t.done).sort((a, b) => (a.due || "9999").localeCompare(b.due || "9999") || a.createdAt - b.createdAt);
+  const done = vis.filter(t => t.done).sort((a, b) => (b.doneAt || 0) - (a.doneAt || 0));
   const list = document.getElementById("todoList");
-  if (all.length) list.replaceChildren(...all.map(todoRow));
-  else list.innerHTML = '<div class="empty">아직 할 일이 없어요.<br>아래에서 추가할 수 있어요.</div>';
+  if (open.length) list.replaceChildren(...open.map(todoRow));
+  else list.innerHTML = '<div class="empty">' + (done.length ? "할 일을 모두 마쳤어요!" : "아직 할 일이 없어요.<br>아래에서 추가할 수 있어요.") + "</div>";
   document.getElementById("todoDoneBox").hidden = !done.length;
-  document.getElementById("todoDoneSum").textContent = `완료 ${done.length}개 · 남은 일 ${open.length}개`;
+  document.getElementById("todoDoneSum").textContent = `완료한 일 ${done.length}개`;
+  document.getElementById("todoDoneList").replaceChildren(...done.map(todoRow));
   const tab = document.getElementById("tabTodo");
   tab.textContent = open.length ? `할 일 ${open.length}` : "할 일";
 }
