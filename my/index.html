@@ -171,6 +171,18 @@ input[type="text"], input[type="search"], textarea { width: 100%; border: 1px so
 textarea { resize: vertical; min-height: 70px; line-height: 1.6; }
 textarea.memo-body { min-height: 220px; }
 .cats { display: flex; gap: 6px; flex-wrap: wrap; }
+select { width: 100%; border: 1px solid var(--line); background: var(--surface-2); border-radius: 8px; padding: 8px 10px; min-width: 0; }
+select:disabled, .dows label:has(input:disabled), #evUntil:disabled { opacity: .55; cursor: default; }
+.dows { display: flex; gap: 4px; flex-wrap: wrap; }
+.dows label { position: relative; width: 34px; height: 30px; display: inline-grid; place-items: center; border: 1px solid var(--line); border-radius: 8px; font-size: 13px; cursor: pointer; }
+.dows input { position: absolute; opacity: 0; pointer-events: none; }
+.dows label:has(input:checked) { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+.dows label:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; }
+.scope { display: flex; gap: 14px; flex-wrap: wrap; }
+.scope label { display: inline-flex; align-items: center; gap: 5px; font-size: 13px; color: var(--ink); cursor: pointer; }
+.repeat-hint { font-size: 12px; color: var(--accent); min-height: 0; }
+.repeat-hint:empty { display: none; }
+#evUntil[aria-invalid="true"] { border-color: var(--holiday); }
 .cats label { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--line); border-radius: 999px; padding: 4px 11px; font-size: 13px; cursor: pointer; }
 .cats input { position: absolute; opacity: 0; pointer-events: none; }
 .cats label:has(input:checked) { border-color: var(--c); background: color-mix(in srgb, var(--c) 14%, transparent); }
@@ -258,6 +270,23 @@ html, body { margin: 0; }
         </div>
         <datalist id="timeOptions"></datalist>
         <div class="field"><span class="lbl">분류</span><div class="cats" id="evCats"></div></div>
+        <div class="field" id="evScopeBox" hidden><span class="lbl">반복 일정 고치기</span>
+          <div class="scope"><label><input type="radio" name="evscope" value="one" checked>이 날만</label><label><input type="radio" name="evscope" value="after">이 날부터 이후 모두</label></div>
+        </div>
+        <div class="row" id="evRepeatRow" hidden>
+          <div class="field"><label for="evRepeat">반복 (고정 일정)</label>
+            <select id="evRepeat">
+              <option value="none">반복 안 함</option>
+              <option value="weekly">매주 (요일 선택)</option>
+              <option value="monthly">매월 같은 날</option>
+              <option value="yearly">매년 같은 날 (양력)</option>
+              <option value="lunar_yearly">매년 같은 날 (음력)</option>
+            </select>
+          </div>
+          <div class="field" id="evUntilBox" hidden><label for="evUntil">끝나는 날 (선택)</label><input type="text" id="evUntil" inputmode="numeric" maxlength="10" placeholder="비우면 계속"></div>
+        </div>
+        <div class="field" id="evDowBox" hidden><span class="lbl">요일</span><div class="dows" id="evDows"></div></div>
+        <div class="repeat-hint" id="evRepeatHint"></div>
         <div class="field"><label for="evNote">메모</label><textarea id="evNote" placeholder="장소, 준비물, 참고 내용"></textarea></div>
         <div class="actions">
           <button type="submit" class="btn primary" id="evSave">추가</button>
@@ -353,6 +382,7 @@ const uid = () => (crypto.randomUUID ? crypto.randomUUID() :
 import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
 import { CONFIG } from "../config.js";
 import { lunarOf, lunarShort, lunarLong } from "../lunar.js";
+import { seriesDates, seriesText, occurrenceId, addDays } from "../repeat.js";
 const sb = createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY, {
   auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: false }
 });
@@ -362,7 +392,8 @@ const state = {
   view: new Date(), selected: ymd(new Date()),
   filter: { work: true, personal: true, etc: true },
   editingEvent: null, editingMemo: null, memoQuery: "",
-  holidaysUpdated: null, weather: {}
+  holidaysUpdated: null, weather: {},
+  series: {}, seriesOk: false          // 고정(반복) 일정 규칙 (업데이트 5 전이면 seriesOk=false → 반복 입력 숨김)
 };
 state.view.setDate(1);
 
@@ -372,7 +403,7 @@ const toRow = {
   memos:  m => ({ id: m.id, title: m.title || null, body: m.body || null, cat: m.cat, date: m.date || null, updated_at: new Date().toISOString() })
 };
 const fromRow = {
-  events: r => ({ id: r.id, date: r.date, title: r.title, start: r.start_time || "", end: r.end_time || "", cat: r.cat, note: r.note || "", updatedAt: Date.parse(r.updated_at) }),
+  events: r => ({ id: r.id, date: r.date, title: r.title, start: r.start_time || "", end: r.end_time || "", cat: r.cat, note: r.note || "", seriesId: r.series_id || null, updatedAt: Date.parse(r.updated_at) }),
   memos:  r => ({ id: r.id, title: r.title || "", body: r.body || "", cat: r.cat, date: r.date || "", createdAt: Date.parse(r.created_at), updatedAt: Date.parse(r.updated_at) })
 };
 
@@ -416,11 +447,12 @@ const Store = {
       this.mode = "cloud"; showStatus(); return;      // 바뀐 것 없음
     }
     const [from, to] = monthRange(state.view, 2, 3);   // 보고 있는 달 기준 2달 전 ~ 3달 후
-    const [ev, me, ho, wx] = await Promise.all([
+    const [ev, me, ho, wx, se] = await Promise.all([
       sb.from("events").select("*").gte("date", from).lte("date", to),
       sb.from("memos").select("*"),
       (force || holidaysDue) ? sb.from("holidays").select("date,name,updated_at") : Promise.resolve(null),
-      sb.from("weather").select("date,code,wf,tmin,tmax,pop")
+      sb.from("weather").select("date,code,wf,tmin,tmax,pop"),
+      sb.from("event_series").select("*")
     ]);
     if (ev.error || me.error) { this.mode = "error"; showStatus(); return; }
     Sync.sig = sig; Sync.from = from; Sync.to = to; Sync.ready = true;
@@ -440,8 +472,12 @@ const Store = {
       state.holidaysUpdated = latest ? new Date(latest) : null;
     }
     if (wx && !wx.error) { state.weather = {}; wx.data.forEach(w => state.weather[w.date] = w); }
+    state.seriesOk = !se.error;
+    if (!se.error) { state.series = {}; se.data.forEach(x => state.series[x.id] = x); }
+    document.getElementById("evRepeatRow").hidden = !state.seriesOk;
     this.mode = "cloud";
     showStatus(); render(); renderMemos();
+    Repeat.extend();
   },
 
   async put(kind, item) {
@@ -455,6 +491,82 @@ const Store = {
     state[kind] = state[kind].filter(x => x.id !== id);
     const { error } = await sb.from(kind).delete().eq("id", id);
     if (error) { toast("삭제하지 못했어요. 인터넷 연결을 확인하고 다시 시도해주세요."); this.mode = "error"; showStatus(); }
+  }
+};
+
+/* ---------- 고정(반복) 일정 ----------
+   규칙은 event_series 에 한 줄, 실제 날짜는 events 에 하루 한 줄씩 (위젯들이 그대로 보여줌).
+   앞으로 약 1년치를 만들어 두고, 내 달력을 열 때 모자라면 이어서 만들어요. */
+const HORIZON_DAYS = 400;
+const nowIso = () => new Date().toISOString();
+const Repeat = {
+  busy: false,
+  horizon() { return addDays(ymd(new Date()), HORIZON_DAYS); },
+  async makeRows(sr, from, to) {
+    return Promise.all(seriesDates(sr, from, to).map(async date => ({
+      id: await occurrenceId(sr.id, date), series_id: sr.id, date,
+      title: sr.title, start_time: sr.start_time, end_time: sr.end_time, cat: sr.cat, note: sr.note, updated_at: nowIso()
+    })));
+  },
+  async insertRows(rows) {
+    for (let i = 0; i < rows.length; i += 200) {
+      const { error } = await sb.from("events").upsert(rows.slice(i, i + 200), { onConflict: "id", ignoreDuplicates: true });
+      if (error) return error;
+    }
+    return null;
+  },
+  // f: { title, start, end, cat, note, kind, weekdays, until } → start 날짜부터 반복 만들기
+  async create(f, start) {
+    const h = this.horizon();
+    const sr = {
+      id: uid(), kind: f.kind, weekdays: f.kind === "weekly" ? f.weekdays : null,
+      start_date: start, until: f.until || null, made_until: f.until && f.until < h ? f.until : h,
+      title: f.title, start_time: f.start || null, end_time: f.end || null, cat: f.cat, note: f.note || null, updated_at: nowIso()
+    };
+    const rows = await this.makeRows(sr, start, sr.made_until);
+    if (!rows.length) return { error: "empty" };
+    let r = await sb.from("event_series").insert(sr);
+    if (r.error) return { error: r.error };
+    const e2 = await this.insertRows(rows);
+    if (e2) { await sb.from("event_series").delete().eq("id", sr.id); return { error: e2 }; }
+    state.series[sr.id] = sr;
+    return { count: rows.length, series: sr };
+  },
+  // date 날짜부터(포함) 반복을 끝냄. 그 전 날짜가 하나도 없으면 반복 자체를 지움
+  async endFrom(sr, date) {
+    let r = await sb.from("events").delete().eq("series_id", sr.id).gte("date", date);
+    if (r.error) return r.error;
+    r = await sb.from("events").select("id", { count: "exact", head: true }).eq("series_id", sr.id);
+    if (r.error) return r.error;
+    if (!r.count) {
+      r = await sb.from("event_series").delete().eq("id", sr.id);
+      if (!r.error) delete state.series[sr.id];
+    } else {
+      const u = addDays(date, -1);
+      r = await sb.from("event_series").update({ until: u, made_until: u, updated_at: nowIso() }).eq("id", sr.id);
+      if (!r.error) { sr.until = u; sr.made_until = u; }
+    }
+    return r.error || null;
+  },
+  // 만들어 둔 날짜가 앞으로 1년이 안 남은 반복은 이어서 만들기
+  async extend() {
+    if (this.busy || !state.seriesOk) return;
+    const h = this.horizon(), soon = addDays(ymd(new Date()), HORIZON_DAYS - 35);
+    const due = Object.values(state.series).filter(x => x.made_until < soon && (!x.until || x.made_until < x.until));
+    if (!due.length) return;
+    this.busy = true;
+    let added = 0;
+    try {
+      for (const sr of due) {
+        const to = sr.until && sr.until < h ? sr.until : h;
+        const rows = await this.makeRows(sr, addDays(sr.made_until, 1), to);
+        if (await this.insertRows(rows)) break;
+        const { error } = await sb.from("event_series").update({ made_until: to }).eq("id", sr.id);
+        if (error) break;
+        sr.made_until = to; added += rows.length;
+      }
+    } finally { this.busy = false; }
+    if (added) Store.loadAll(true);
   }
 };
 
@@ -664,7 +776,8 @@ function renderDay() {
     t.style.whiteSpace = "pre-line";
     const title = document.createElement("span"); title.className = "t"; title.textContent = e.title;
     const note = document.createElement("span"); note.className = "n";
-    note.textContent = (CATS.find(c => c.id === e.cat) || CATS[2]).name + (e.note ? " · " + e.note.split("\n")[0] : "");
+    const sr = e.seriesId && state.series[e.seriesId];
+    note.textContent = (CATS.find(c => c.id === e.cat) || CATS[2]).name + (sr ? " · " + seriesText(sr) : "") + (e.note ? " · " + e.note.split("\n")[0] : "");
     b.append(t, title, note);
     b.addEventListener("click", () => editEvent(e.id));
     return b;
@@ -747,6 +860,8 @@ function resetEventForm() {
   document.getElementById("evSave").textContent = "추가";
   document.getElementById("evCancel").hidden = true;
   disarm(document.getElementById("evDelete")).hidden = true;
+  document.getElementById("evScopeBox").hidden = true;
+  setRepeat({ kind: "none" });
 }
 function editEvent(id) {
   const e = state.events.find(x => x.id === id); if (!e) return;
@@ -760,8 +875,54 @@ function editEvent(id) {
   document.getElementById("evSave").textContent = "저장";
   document.getElementById("evCancel").hidden = false;
   disarm(document.getElementById("evDelete")).hidden = false;
+  const sr = e.seriesId && state.series[e.seriesId];
+  document.getElementById("evScopeBox").hidden = !sr;
+  document.querySelector('input[name="evscope"][value="one"]').checked = true;
+  setRepeat(sr ? { kind: sr.kind, weekdays: sr.weekdays, until: sr.until } : { kind: "none" });
   document.getElementById("evTitle").focus();
 }
+
+/* 반복 입력 칸 */
+const formDate = () => { const o = state.events.find(x => x.id === state.editingEvent); return o ? o.date : state.selected; };
+const editingSeries = () => { const o = state.events.find(x => x.id === state.editingEvent); return o && o.seriesId ? state.series[o.seriesId] || null : null; };
+const scopeAfter = () => (document.querySelector('input[name="evscope"]:checked') || {}).value === "after";
+document.getElementById("evDows").replaceChildren(...["일", "월", "화", "수", "목", "금", "토"].map((n, i) => {
+  const l = document.createElement("label");
+  l.innerHTML = `<input type="checkbox" value="${i}">`;
+  l.append(n);
+  return l;
+}));
+const getWeekdays = () => [...document.querySelectorAll("#evDows input:checked")].map(x => Number(x.value));
+function setRepeat(r) {
+  document.getElementById("evRepeat").value = r.kind || "none";
+  const days = r.weekdays && r.weekdays.length ? r.weekdays : [parseYmd(formDate()).getDay()];
+  document.querySelectorAll("#evDows input").forEach(x => x.checked = days.includes(Number(x.value)));
+  const u = document.getElementById("evUntil"); u.value = r.until || ""; u.removeAttribute("aria-invalid");
+  updateRepeatUI();
+}
+function updateRepeatUI() {
+  const kind = document.getElementById("evRepeat").value;
+  const locked = !!editingSeries() && !scopeAfter();      // 반복 일정의 "이 날만" 고치기는 반복 설정을 바꾸지 않음
+  document.getElementById("evDowBox").hidden = kind !== "weekly";
+  document.getElementById("evUntilBox").hidden = kind === "none";
+  document.querySelectorAll("#evRepeat, #evUntil, #evDows input").forEach(x => x.disabled = locked);
+  const until = normalizeDate(document.getElementById("evUntil").value);
+  document.getElementById("evRepeatHint").textContent = kind === "none" ? "" :
+    seriesText({ kind, weekdays: getWeekdays(), start_date: formDate(), until: until || null }) + (locked ? "" : " 반복으로 저장돼요");
+}
+document.getElementById("evRepeat").addEventListener("change", () => {
+  if (document.getElementById("evRepeat").value === "weekly" && !getWeekdays().length)
+    document.querySelector(`#evDows input[value="${parseYmd(formDate()).getDay()}"]`).checked = true;
+  updateRepeatUI();
+});
+document.getElementById("evDows").addEventListener("change", updateRepeatUI);
+document.querySelectorAll('input[name="evscope"]').forEach(x => x.addEventListener("change", updateRepeatUI));
+document.getElementById("evUntil").addEventListener("blur", e => {
+  const v = normalizeDate(e.target.value);
+  if (v === null) { e.target.setAttribute("aria-invalid", "true"); toast("날짜는 1231, 2027-03-31 처럼 입력해 주세요."); }
+  else { e.target.value = v; e.target.removeAttribute("aria-invalid"); }
+  updateRepeatUI();
+});
 
 document.getElementById("evForm").addEventListener("submit", async ev => {
   ev.preventDefault();
@@ -778,9 +939,39 @@ document.getElementById("evForm").addEventListener("submit", async ev => {
     title, start, end,
     cat: getCat("evcat"),
     note: document.getElementById("evNote").value.trim(),
+    seriesId: old ? old.seriesId : null,
     updatedAt: Date.now()
   };
   const wasEdit = !!old;
+
+  // 고정(반복) 일정
+  const sr = editingSeries(), after = !!sr && scopeAfter();
+  const kind = state.seriesOk ? document.getElementById("evRepeat").value : "none";
+  if (after || (!sr && kind !== "none")) {
+    const f = { title, start, end, cat: item.cat, note: item.note, kind, weekdays: getWeekdays(), until: "" };
+    if (kind !== "none") {
+      f.until = normalizeDate(document.getElementById("evUntil").value);
+      if (f.until === null) { toast("끝나는 날은 1231, 2027-03-31 처럼 입력해 주세요."); return; }
+      if (f.until && f.until < item.date) { toast("끝나는 날이 시작하는 날보다 빨라요."); return; }
+      if (kind === "weekly" && !f.weekdays.length) { toast("반복할 요일을 하나 이상 골라 주세요."); return; }
+    }
+    resetEventForm();
+    toast("저장하는 중…");
+    if (after) {
+      const err = await Repeat.endFrom(sr, item.date);
+      if (err) { toast("저장하지 못했어요. 인터넷 연결을 확인하고 다시 시도해주세요."); return; }
+    }
+    let r = { count: 1 };
+    if (kind === "none") { item.id = uid(); item.seriesId = null; await Store.put("events", item); }
+    else {
+      r = await Repeat.create(f, item.date);
+      if (r.error) { toast(r.error === "empty" ? "반복할 날짜가 없어요. 요일이나 끝나는 날을 확인해 주세요." : "저장하지 못했어요. 인터넷 연결을 확인하고 다시 시도해주세요."); await Store.loadAll(true); return; }
+      if (old && !old.seriesId) await Store.remove("events", old.id);   // 한 번짜리 일정을 반복으로 바꾼 경우
+    }
+    await Store.loadAll(true);
+    toast(kind === "none" ? "이 날부터 반복을 끝냈어요" : `${seriesText(r.series)} 일정을 저장했어요`);
+    return;
+  }
   resetEventForm();
   render();
   await Store.put("events", item);
@@ -838,7 +1029,15 @@ function twoStep(btn, action) {
 }
 twoStep(document.getElementById("evDelete"), async () => {
   const id = state.editingEvent; if (!id) return;
-  resetEventForm(); await Store.remove("events", id); render(); toast("일정을 삭제했어요");
+  const sr = editingSeries(), after = !!sr && scopeAfter(), date = formDate();
+  resetEventForm();
+  if (after) {
+    const err = await Repeat.endFrom(sr, date);
+    await Store.loadAll(true);
+    toast(err ? "삭제하지 못했어요. 인터넷 연결을 확인하고 다시 시도해주세요." : "이 날부터 반복 일정을 모두 지웠어요");
+    return;
+  }
+  await Store.remove("events", id); render(); toast("일정을 삭제했어요");
 });
 
 /* 메모 */
