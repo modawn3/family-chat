@@ -47,6 +47,7 @@ my/manifest.json, my/icon-*.png 개인 달력을 따로 홈 화면에 설치할 
 android/                        안드로이드 「나의 달력」 앱(홈 화면 월간 위젯 + 예전 달력 화면). GitHub Actions(.github/workflows/android.yml)가
                                 서명 전 APK 를 만들어 android-build 브랜치에 올림 → 열쇠로 서명(android/tools/sign.mjs) 후 사용자에게 전달.
                                 서명 열쇠는 저장소에 없음: 프로젝트 파일 /mnt/project-files/android-keys/ (2026-10-12 새로 만듦). 버전 올릴 땐 AndroidManifest.xml 의 versionCode
+                                1.4.0 부터 앱 화면은 사이트의 my/ 를 그대로 띄움(AndroidBridge 로 로그인 공유·위젯 자료·알림 권한). assets/www 는 예전 화면(안 씀)
 supabase/functions/sync-holidays, sync-weather   공휴일(공공데이터포털)·날씨(기상청) 갱신 함수
 supabase/move-calendar/*.sql    예전 개인 달력 프로젝트 → 이 프로젝트 자료 옮기기 (한 번만)
 ```
@@ -71,6 +72,8 @@ supabase/move-calendar/*.sql    예전 개인 달력 프로젝트 → 이 프로
 - `memos(id, user_id, title, body, cat, date|null, updated_at)` — 본인 것만, date 가 있으면 달력에도 표시
 - `event_series(id, user_id, kind weekly|monthly|yearly|lunar_yearly, weekdays smallint[], start_date, until, made_until, title, start_time, end_time, cat, note)` — 고정(반복) 일정 규칙(업데이트 005).
   실제 날짜는 `events` 에 하루 한 줄씩(`series_id`, id 는 반복 id+날짜로 정해짐) 약 400일치 만들어 두고, 내 달력이 열릴 때 `Repeat.extend()` 가 이어 만듦 → 위젯은 고칠 필요 없음
+- `remind smallint|null` (업데이트 008) — `events`·`todos`·`event_series` 에 있음. 몇 분 전 알림(null = 알림 없음, 기본). 시간 없는 일정·할 일은 그날 오전 9시 기준.
+  안드로이드 「나의 달력」 앱(1.4.0~)이 `Reminders.java` 로 휴대폰 안에서 AlarmManager 로 울림(서버 푸시 아님). 내 달력 일정·할 일 입력 칸 「알림」에서 고름
 - `todos(id, user_id, title, done, done_at, due date|null, cat, note, updated_at)` — 할 일(업데이트 006), 본인 것만. 내 달력 「할 일」 탭, due 가 있으면 달력 칸에 ☐ 표시. 위젯에는 아직 안 나옴
 - `holidays(date PK, name, source)`, `weather(date PK, code, wf, tmin, tmax, pop, src)` — 로그인한 사람은 읽기만, 함수가 씀
 - 가족 달력(`chat.events`)도 `public.holidays` 를 읽어 공휴일 표시(없으면 양력 고정 공휴일만)

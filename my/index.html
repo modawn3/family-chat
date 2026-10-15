@@ -196,6 +196,8 @@ select:disabled, .dows label:has(input:disabled), #evUntil:disabled { opacity: .
 .dows label:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; }
 .scope { display: flex; gap: 14px; flex-wrap: wrap; }
 .scope label { display: inline-flex; align-items: center; gap: 5px; font-size: 13px; color: var(--ink); cursor: pointer; }
+.remind-hint { font-size: 12px; color: var(--muted); }
+.bell { font-size: 11px; margin-left: 3px; }
 .repeat-hint { font-size: 12px; color: var(--accent); min-height: 0; }
 .repeat-hint:empty { display: none; }
 #evUntil[aria-invalid="true"] { border-color: var(--holiday); }
@@ -287,6 +289,7 @@ html, body { margin: 0; }
         </div>
         <datalist id="timeOptions"></datalist>
         <div class="field"><span class="lbl">분류</span><div class="cats" id="evCats"></div></div>
+        <div class="field remind-box" hidden><label for="evRemind">알림 (안드로이드 「나의 달력」 앱)</label><select id="evRemind"></select></div>
         <div class="field" id="evScopeBox" hidden><span class="lbl">반복 일정 고치기</span>
           <div class="scope"><label><input type="radio" name="evscope" value="one" checked>이 날만</label><label><input type="radio" name="evscope" value="after">이 날부터 이후 모두</label></div>
         </div>
@@ -330,6 +333,8 @@ html, body { margin: 0; }
           <div class="field" style="flex: 0 0 auto; justify-content: flex-end"><button type="button" class="btn" id="todoDueSel">선택한 날짜</button></div>
         </div>
         <div class="field"><span class="lbl">분류</span><div class="cats" id="todoCats"></div></div>
+        <div class="field remind-box" hidden><label for="todoRemind">알림 (안드로이드 「나의 달력」 앱)</label><select id="todoRemind"></select>
+          <span class="remind-hint" id="todoRemindHint" hidden>마감일을 넣으면 알림을 고를 수 있어요.</span></div>
         <div class="field"><label for="todoNote">메모</label><textarea id="todoNote" placeholder="필요하면 자세한 내용"></textarea></div>
         <div class="actions">
           <button type="submit" class="btn primary" id="todoSave">추가</button>
@@ -426,8 +431,17 @@ import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js
 import { CONFIG } from "../config.js";
 import { lunarOf, lunarShort, lunarLong } from "../lunar.js";
 import { seriesDates, seriesText, occurrenceId, addDays } from "../repeat.js";
+// 안드로이드 「나의 달력」 앱 안에서 열리면 로그인 정보를 앱(위젯·알림)과 같은 곳에 보관
+const AB = window.AndroidBridge || null;
 const sb = createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY, {
-  auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: false }
+  auth: {
+    persistSession: true, autoRefreshToken: true, detectSessionInUrl: false,
+    ...(AB ? { storage: {
+      getItem: k => { const v = AB.getItem(k); return v === undefined ? null : v; },
+      setItem: (k, v) => AB.setItem(k, v),
+      removeItem: k => AB.removeItem(k)
+    } } : {})
+  }
 });
 
 const state = {
@@ -436,20 +450,23 @@ const state = {
   filter: { work: true, personal: true, etc: true },
   editingEvent: null, editingMemo: null, editingTodo: null, memoQuery: "",
   holidaysUpdated: null, weather: {},
-  series: {}, seriesOk: false          // 고정(반복) 일정 규칙 (업데이트 5 전이면 seriesOk=false → 반복 입력 숨김)
+  series: {}, seriesOk: false,         // 고정(반복) 일정 규칙 (업데이트 5 전이면 seriesOk=false → 반복 입력 숨김)
+  remindOk: false                      // 알림 칸 (업데이트 8 전이면 false → 알림 입력 숨김)
 };
 state.view.setDate(1);
 
 // 앱 안의 이름 <-> 테이블 칸 이름 변환
 const toRow = {
-  events: e => ({ id: e.id, date: e.date, title: e.title, start_time: e.start || null, end_time: e.end || null, cat: e.cat, note: e.note || null, updated_at: new Date().toISOString() }),
+  events: e => ({ id: e.id, date: e.date, title: e.title, start_time: e.start || null, end_time: e.end || null, cat: e.cat, note: e.note || null, ...remindCol(e), updated_at: new Date().toISOString() }),
   memos:  m => ({ id: m.id, title: m.title || null, body: m.body || null, cat: m.cat, date: m.date || null, updated_at: new Date().toISOString() }),
-  todos:  t => ({ id: t.id, title: t.title, done: !!t.done, done_at: t.doneAt ? new Date(t.doneAt).toISOString() : null, due: t.due || null, cat: t.cat, note: t.note || null, updated_at: new Date().toISOString() })
+  todos:  t => ({ id: t.id, title: t.title, done: !!t.done, done_at: t.doneAt ? new Date(t.doneAt).toISOString() : null, due: t.due || null, cat: t.cat, note: t.note || null, ...remindCol(t), updated_at: new Date().toISOString() })
 };
+// 알림 칸은 업데이트 8 이후에만 보냄 (전이면 칸이 없어서 저장 오류가 남)
+function remindCol(x) { return state.remindOk ? { remind: x.remind ?? null } : {}; }
 const fromRow = {
-  events: r => ({ id: r.id, date: r.date, title: r.title, start: r.start_time || "", end: r.end_time || "", cat: r.cat, note: r.note || "", seriesId: r.series_id || null, updatedAt: Date.parse(r.updated_at) }),
+  events: r => ({ id: r.id, date: r.date, title: r.title, start: r.start_time || "", end: r.end_time || "", cat: r.cat, note: r.note || "", seriesId: r.series_id || null, remind: r.remind ?? null, updatedAt: Date.parse(r.updated_at) }),
   memos:  r => ({ id: r.id, title: r.title || "", body: r.body || "", cat: r.cat, date: r.date || "", createdAt: Date.parse(r.created_at), updatedAt: Date.parse(r.updated_at) }),
-  todos:  r => ({ id: r.id, title: r.title, done: r.done, doneAt: r.done_at ? Date.parse(r.done_at) : null, due: r.due || "", cat: r.cat, note: r.note || "", createdAt: Date.parse(r.created_at), updatedAt: Date.parse(r.updated_at) })
+  todos:  r => ({ id: r.id, title: r.title, done: r.done, doneAt: r.done_at ? Date.parse(r.done_at) : null, due: r.due || "", cat: r.cat, note: r.note || "", remind: r.remind ?? null, createdAt: Date.parse(r.created_at), updatedAt: Date.parse(r.updated_at) })
 };
 
 
@@ -492,13 +509,14 @@ const Store = {
       this.mode = "cloud"; showStatus(); return;      // 바뀐 것 없음
     }
     const [from, to] = monthRange(state.view, 2, 3);   // 보고 있는 달 기준 2달 전 ~ 3달 후
-    const [ev, me, ho, wx, se, td] = await Promise.all([
+    const [ev, me, ho, wx, se, td, rm] = await Promise.all([
       sb.from("events").select("*").gte("date", from).lte("date", to),
       sb.from("memos").select("*"),
       (force || holidaysDue) ? sb.from("holidays").select("date,name,updated_at") : Promise.resolve(null),
       sb.from("weather").select("date,code,wf,tmin,tmax,pop"),
       sb.from("event_series").select("*"),
-      sb.from("todos").select("*")
+      sb.from("todos").select("*"),
+      sb.from("todos").select("remind").limit(1)          // 알림 칸이 있는지(업데이트 8) 확인
     ]);
     if (ev.error || me.error) { this.mode = "error"; showStatus(); return; }
     Sync.sig = sig; Sync.from = from; Sync.to = to; Sync.ready = true;
@@ -524,8 +542,11 @@ const Store = {
     state.todoOk = !td.error;
     if (!td.error) state.todos = td.data.map(fromRow.todos);
     document.getElementById("tabTodo").hidden = !state.todoOk;
+    state.remindOk = !rm.error;
+    document.querySelectorAll(".remind-box").forEach(x => x.hidden = !state.remindOk);
     this.mode = "cloud";
     showStatus(); render(); renderMemos(); renderTodos();
+    notifyAndroid();
     Repeat.extend();
   },
 
@@ -535,12 +556,65 @@ const Store = {
     if (i >= 0) list[i] = item; else list.push(item);
     const { error } = await sb.from(kind).upsert(toRow[kind](item));
     if (error) { toast("저장하지 못했어요. 인터넷 연결을 확인하고 다시 시도해주세요."); this.mode = "error"; showStatus(); }
+    notifyAndroid();
   },
   async remove(kind, id) {
     state[kind] = state[kind].filter(x => x.id !== id);
     const { error } = await sb.from(kind).delete().eq("id", id);
     if (error) { toast("삭제하지 못했어요. 인터넷 연결을 확인하고 다시 시도해주세요."); this.mode = "error"; showStatus(); }
+    notifyAndroid();
   }
+};
+
+/* ---------- 안드로이드 앱: 위젯·알림에 자료 넘기기 ---------- */
+function notifyAndroid() {
+  if (!AB) return;
+  try {
+    AB.dataChanged(JSON.stringify({
+      events: state.events.map(e => ({ id: e.id, date: e.date, title: e.title, start_time: e.start || null, cat: e.cat, remind: e.remind ?? null })),
+      memos: state.memos.filter(m => m.date).map(m => ({ id: m.id, date: m.date, title: m.title || null, body: m.body || null, cat: m.cat })),
+      todos: state.todos.filter(t => !t.done && t.due).map(t => ({ id: t.id, due: t.due, title: t.title, cat: t.cat, remind: t.remind ?? null })),
+      holidays: { ...HOLIDAYS }, weather: state.weather, updated: Date.now()
+    }));
+  } catch (e) { console.warn("앱에 자료 넘기기 실패", e); }
+}
+// 알림을 고르면 휴대폰 알림 권한을 물어봄 (안드로이드 13 이상)
+function askNotifyPermission(remind) {
+  if (AB && remind != null && AB.askNotifyPermission) { try { AB.askNotifyPermission(); } catch (e) {} }
+}
+
+/* ---------- 알림 고르기 ----------
+   remind = 몇 분 전 (null = 알림 없음). 시간이 없는 일정·할 일은 그날 오전 9시 기준 */
+const REMIND_TIMED = [[0, "시작할 때"], [10, "10분 전"], [30, "30분 전"], [60, "1시간 전"], [1440, "하루 전"]];
+const REMIND_DAY = [[0, "당일 오전 9시"], [1440, "전날 오전 9시"]];
+const REMIND_TODO = [[0, "마감일 오전 9시"], [1440, "마감 전날 오전 9시"]];
+function fillRemind(sel, opts, value) {
+  const keep = value === undefined ? sel.value : (value == null ? "" : String(value));
+  sel.replaceChildren(new Option("알림 없음", ""), ...opts.map(([v, t]) => new Option(t, String(v))));
+  // 고를 수 없는 값(예: 시간을 지워서 10분 전이 없어짐)은 가장 가까운 값으로
+  if (keep && !opts.some(([v]) => String(v) === keep)) {
+    const n = Number(keep);
+    sel.value = String(opts.reduce((a, [v]) => Math.abs(v - n) < Math.abs(a - n) ? v : a, opts[0][0]));
+  } else sel.value = keep;
+}
+const readRemind = id => { const v = document.getElementById(id).value; return v === "" ? null : Number(v); };
+function syncEvRemind(value) {
+  const hasTime = !!normalizeTime(document.getElementById("evStart").value);
+  fillRemind(document.getElementById("evRemind"), hasTime ? REMIND_TIMED : REMIND_DAY, value);
+}
+function syncTodoRemind(value) {
+  const sel = document.getElementById("todoRemind");
+  const hasDue = !!normalizeDate(document.getElementById("todoDue").value);
+  fillRemind(sel, REMIND_TODO, value);
+  sel.disabled = !hasDue;
+  if (!hasDue) sel.value = "";
+  document.getElementById("todoRemindHint").hidden = hasDue;
+}
+const remindLabel = (x, timed) => {
+  if (x.remind == null) return "";
+  const list = timed === "todo" ? REMIND_TODO : timed ? REMIND_TIMED : REMIND_DAY;
+  const f = list.find(([v]) => v === x.remind);
+  return "🔔 " + (f ? f[1] : x.remind + "분 전");
 };
 
 /* ---------- 고정(반복) 일정 ----------
@@ -554,7 +628,8 @@ const Repeat = {
   async makeRows(sr, from, to) {
     return Promise.all(seriesDates(sr, from, to).map(async date => ({
       id: await occurrenceId(sr.id, date), series_id: sr.id, date,
-      title: sr.title, start_time: sr.start_time, end_time: sr.end_time, cat: sr.cat, note: sr.note, updated_at: nowIso()
+      title: sr.title, start_time: sr.start_time, end_time: sr.end_time, cat: sr.cat, note: sr.note,
+      ...(state.remindOk ? { remind: sr.remind ?? null } : {}), updated_at: nowIso()
     })));
   },
   async insertRows(rows) {
@@ -570,7 +645,8 @@ const Repeat = {
     const sr = {
       id: uid(), kind: f.kind, weekdays: f.kind === "weekly" ? f.weekdays : null,
       start_date: start, until: f.until || null, made_until: f.until && f.until < h ? f.until : h,
-      title: f.title, start_time: f.start || null, end_time: f.end || null, cat: f.cat, note: f.note || null, updated_at: nowIso()
+      title: f.title, start_time: f.start || null, end_time: f.end || null, cat: f.cat, note: f.note || null,
+      ...(state.remindOk ? { remind: f.remind ?? null } : {}), updated_at: nowIso()
     };
     const rows = await this.makeRows(sr, start, sr.made_until);
     if (!rows.length) return { error: "empty" };
@@ -639,6 +715,7 @@ async function showApp(session) {
     document.getElementById("who").textContent = session.user.email || "";
     await Store.loadAll(true);
     openFromAddress();
+    if (window.onAndroidLaunch) window.onAndroidLaunch();
   }
 }
 /* 위젯에서 눌러 열린 주소: ?date=2026-10-07 (&add=1 이면 새 일정 입력) */
@@ -667,6 +744,7 @@ document.getElementById("loginForm").addEventListener("submit", async e => {
 document.getElementById("logoutBtn").addEventListener("click", async () => {
   await sb.auth.signOut();
   state.events = []; state.memos = []; state.todos = [];
+  if (AB) { try { AB.loggedOut(); } catch (e) {} }
   showApp(null);
 });
 
@@ -828,7 +906,7 @@ function renderDay() {
     b.type = "button"; b.className = "item"; b.style.setProperty("--c", catColor(t.cat));
     const tm = document.createElement("span"); tm.className = "time"; tm.textContent = "할 일";
     const title = document.createElement("span"); title.className = "t"; title.textContent = "☐ " + t.title;
-    const note = document.createElement("span"); note.className = "n"; note.textContent = "마감 · " + (CATS.find(c => c.id === t.cat) || CATS[2]).name + (t.note ? " · " + t.note.split("\n")[0] : "");
+    const note = document.createElement("span"); note.className = "n"; note.textContent = "마감 · " + (CATS.find(c => c.id === t.cat) || CATS[2]).name + (t.remind != null ? " · " + remindLabel(t, "todo") : "") + (t.note ? " · " + t.note.split("\n")[0] : "");
     b.append(tm, title, note);
     b.addEventListener("click", () => { switchTab("todo"); editTodo(t.id); });
     return b;
@@ -842,7 +920,7 @@ function renderDay() {
     const title = document.createElement("span"); title.className = "t"; title.textContent = e.title;
     const note = document.createElement("span"); note.className = "n";
     const sr = e.seriesId && state.series[e.seriesId];
-    note.textContent = (CATS.find(c => c.id === e.cat) || CATS[2]).name + (sr ? " · " + seriesText(sr) : "") + (e.note ? " · " + e.note.split("\n")[0] : "");
+    note.textContent = (CATS.find(c => c.id === e.cat) || CATS[2]).name + (sr ? " · " + seriesText(sr) : "") + (e.remind != null ? " · " + remindLabel(e, !!e.start) : "") + (e.note ? " · " + e.note.split("\n")[0] : "");
     b.append(t, title, note);
     b.addEventListener("click", () => editEvent(e.id));
     return b;
@@ -904,7 +982,7 @@ function todoRow(t) {
   const n = document.createElement("span"); n.className = "n";
   const due = dueText(t);
   if (due) { const s = document.createElement("span"); s.textContent = due.text; if (due.late) s.className = "late"; n.append(s, " · "); }
-  n.append((CATS.find(c => c.id === t.cat) || CATS[2]).name + (t.note ? " · " + t.note.split("\n")[0] : ""));
+  n.append((CATS.find(c => c.id === t.cat) || CATS[2]).name + (!t.done && t.due && t.remind != null ? " · " + remindLabel(t, "todo") : "") + (t.note ? " · " + t.note.split("\n")[0] : ""));
   body.append(title, n);
   body.addEventListener("click", () => editTodo(t.id));
   row.append(tick, body);
@@ -937,6 +1015,7 @@ function resetTodoForm() {
   document.getElementById("todoDue").removeAttribute("aria-invalid");
   setCat("todocat", "work");
   document.getElementById("todoFormTitle").textContent = "새 할 일";
+  syncTodoRemind(null);
   document.getElementById("todoSave").textContent = "추가";
   document.getElementById("todoCancel").hidden = true;
   disarm(document.getElementById("todoDelete")).hidden = true;
@@ -948,6 +1027,7 @@ function editTodo(id) {
   document.getElementById("todoDue").value = t.due || "";
   document.getElementById("todoNote").value = t.note || "";
   setCat("todocat", t.cat || "etc");
+  syncTodoRemind(t.remind);
   document.getElementById("todoFormTitle").textContent = "할 일 수정";
   document.getElementById("todoSave").textContent = "저장";
   document.getElementById("todoCancel").hidden = false;
@@ -999,6 +1079,7 @@ function resetEventForm() {
   document.querySelectorAll(".time-input").forEach(el => el.removeAttribute("aria-invalid"));
   setCat("evcat", "work");
   document.getElementById("evFormTitle").textContent = "새 일정";
+  syncEvRemind(null);
   document.getElementById("evSave").textContent = "추가";
   document.getElementById("evCancel").hidden = true;
   disarm(document.getElementById("evDelete")).hidden = true;
@@ -1013,6 +1094,7 @@ function editEvent(id) {
   document.getElementById("evEnd").value = e.end || "";
   document.getElementById("evNote").value = e.note || "";
   setCat("evcat", e.cat || "etc");
+  syncEvRemind(e.remind);
   document.getElementById("evFormTitle").textContent = "일정 수정";
   document.getElementById("evSave").textContent = "저장";
   document.getElementById("evCancel").hidden = false;
@@ -1082,15 +1164,17 @@ document.getElementById("evForm").addEventListener("submit", async ev => {
     cat: getCat("evcat"),
     note: document.getElementById("evNote").value.trim(),
     seriesId: old ? old.seriesId : null,
+    remind: state.remindOk ? readRemind("evRemind") : (old ? old.remind : null),
     updatedAt: Date.now()
   };
+  askNotifyPermission(item.remind);
   const wasEdit = !!old;
 
   // 고정(반복) 일정
   const sr = editingSeries(), after = !!sr && scopeAfter();
   const kind = state.seriesOk ? document.getElementById("evRepeat").value : "none";
   if (after || (!sr && kind !== "none")) {
-    const f = { title, start, end, cat: item.cat, note: item.note, kind, weekdays: getWeekdays(), until: "" };
+    const f = { title, start, end, cat: item.cat, note: item.note, remind: item.remind, kind, weekdays: getWeekdays(), until: "" };
     if (kind !== "none") {
       f.until = normalizeDate(document.getElementById("evUntil").value);
       if (f.until === null) { toast("끝나는 날은 1231, 2027-03-31 처럼 입력해 주세요."); return; }
@@ -1150,6 +1234,8 @@ function normalizeTime(raw) {
   });
   el.addEventListener("input", () => el.removeAttribute("aria-invalid"));
 });
+document.getElementById("evStart").addEventListener("input", () => syncEvRemind());
+document.getElementById("evStart").addEventListener("blur", () => syncEvRemind());
 // 칸을 누르면 30분 단위 목록도 함께 보이게
 document.getElementById("timeOptions").replaceChildren(...Array.from({ length: 48 }, (_, i) => {
   const o = document.createElement("option");
@@ -1224,8 +1310,10 @@ document.getElementById("todoForm").addEventListener("submit", async ev => {
     id: old ? old.id : uid(), title, due,
     done: old ? old.done : false, doneAt: old ? old.doneAt : null,
     cat: getCat("todocat"), note: document.getElementById("todoNote").value.trim(),
+    remind: state.remindOk ? (due ? readRemind("todoRemind") : null) : (old ? old.remind : null),
     createdAt: old ? old.createdAt : Date.now(), updatedAt: Date.now()
   };
+  askNotifyPermission(item.remind);
   resetTodoForm();
   await Store.put("todos", item);
   renderTodos(); renderCalendar(); renderDay();
@@ -1237,9 +1325,12 @@ document.getElementById("todoDue").addEventListener("blur", e => {
   const v = normalizeDate(e.target.value);
   if (v === null) { e.target.setAttribute("aria-invalid", "true"); toast("날짜는 1020, 2026-10-20, 10/20 처럼 입력해 주세요."); }
   else { e.target.value = v; e.target.removeAttribute("aria-invalid"); }
+  syncTodoRemind();
 });
+document.getElementById("todoDue").addEventListener("input", () => syncTodoRemind());
 document.getElementById("todoDueSel").addEventListener("click", () => {
   const el = document.getElementById("todoDue"); el.value = state.selected; el.removeAttribute("aria-invalid");
+  syncTodoRemind();
 });
 twoStep(document.getElementById("todoDelete"), async () => {
   const id = state.editingTodo; if (!id) return;
@@ -1317,6 +1408,26 @@ function switchTab(which) {
 document.getElementById("tabDay").addEventListener("click", () => switchTab("day"));
 document.getElementById("tabMemo").addEventListener("click", () => switchTab("memo"));
 document.getElementById("tabTodo").addEventListener("click", () => switchTab("todo"));
+syncEvRemind(null); syncTodoRemind(null);
+
+/* 안드로이드 앱: 위젯에서 날짜나 ＋ 를 눌러 열렸을 때 */
+window.onAndroidLaunch = function () {
+  if (!AB || document.getElementById("appRoot").hidden) return;
+  let l = null;
+  try { l = JSON.parse(AB.takeLaunch()); } catch (e) {}
+  if (!l || !l.date) return;
+  selectDate(l.date);
+  if (l.action === "todo") switchTab("todo");
+  if (l.action === "add") setTimeout(() => document.getElementById("evTitle").focus(), 350);
+};
+/* 안드로이드 뒤로 버튼: 수정 중이면 취소, 다른 탭이면 일정 탭으로 */
+window.onAndroidBack = function () {
+  if (state.editingEvent) { resetEventForm(); return true; }
+  if (state.editingTodo) { resetTodoForm(); return true; }
+  if (document.getElementById("paneDay").hidden) { switchTab("day"); return true; }
+  if (window.scrollY > 40) { window.scrollTo({ top: 0, behavior: "smooth" }); return true; }
+  return false;
+};
 document.getElementById("prev").addEventListener("click", () => { state.view = new Date(state.view.getFullYear(), state.view.getMonth() - 1, 1); renderCalendar(); });
 document.getElementById("next").addEventListener("click", () => { state.view = new Date(state.view.getFullYear(), state.view.getMonth() + 1, 1); renderCalendar(); });
 document.getElementById("todayBtn").addEventListener("click", () => selectDate(ymd(new Date())));

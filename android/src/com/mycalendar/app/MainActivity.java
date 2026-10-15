@@ -1,9 +1,15 @@
 package com.mycalendar.app;
 
 import android.app.Activity;
+import android.app.NotificationManager;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
+import android.provider.Settings;
+import android.webkit.WebResourceError;
+import android.widget.Toast;
 import android.webkit.JavascriptInterface;
 import android.webkit.WebChromeClient;
 import android.webkit.WebResourceRequest;
@@ -18,10 +24,15 @@ import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.util.HashMap;
 
-/** 앱 화면: 달력 메모장 웹 화면을 그대로 띄우고, 위젯과 자료를 주고받음 */
+/**
+ * 앱 화면: 가족 채팅 사이트의 「내 달력」(my/)을 그대로 띄우고, 위젯·알림과 자료를 주고받음.
+ * (1.4.0 부터 앱 안 화면 대신 사이트를 띄움 → 화면을 고칠 때 APK 를 다시 만들 필요 없음)
+ */
 public class MainActivity extends Activity {
-    static final String HOST = "app.local";
-    static final String START = "https://" + HOST + "/index.html";
+    static final String HOST = "app.local";                 // 예전 앱 안 화면(assets/www) 주소
+    static final String SITE = "modawn3.github.io";
+    static final String SITE_PATH = "/family-chat/my/";
+    static final String START = "https://" + SITE + SITE_PATH;
 
     WebView web;
     String launchDate, launchAction;
@@ -61,9 +72,23 @@ public class MainActivity extends Activity {
             }
 
             @Override
+            public void onReceivedError(WebView view, WebResourceRequest req, WebResourceError err) {
+                if (!req.isForMainFrame()) return;
+                // 인터넷이 안 될 때: 다시 시도 안내 (위젯·알림은 받아 둔 자료로 계속 동작)
+                view.loadDataWithBaseURL(null,
+                        "<html><head><meta name='viewport' content='width=device-width,initial-scale=1'></head>"
+                        + "<body style='font-family:sans-serif;text-align:center;padding:60px 24px;color:#444'>"
+                        + "<h3>인터넷에 연결할 수 없어요</h3><p>연결을 확인한 뒤 다시 시도해 주세요.</p>"
+                        + "<p><a href='" + START + "' style='display:inline-block;padding:10px 20px;background:#3B4BA8;color:#fff;border-radius:8px;text-decoration:none'>다시 시도</a></p>"
+                        + "</body></html>", "text/html", "utf-8", null);
+            }
+
+            @Override
             public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest req) {
                 Uri u = req.getUrl();
                 if (HOST.equals(u.getHost())) return false;
+                String path = u.getPath() == null ? "" : u.getPath();
+                if (SITE.equals(u.getHost()) && (path + "/").startsWith(SITE_PATH)) return false;
                 try { startActivity(new Intent(Intent.ACTION_VIEW, u)); } catch (Exception ignored) {}
                 return true;
             }
@@ -133,16 +158,53 @@ public class MainActivity extends Activity {
             } catch (Exception e) { return "null"; }
         }
 
-        /** 웹 화면이 자료를 불러오거나 저장한 뒤 부름 → 위젯 즉시 다시 그리기 */
+        /** 웹 화면이 자료를 불러오거나 저장한 뒤 부름 → 위젯 즉시 다시 그리기 + 알림 다시 맞추기 */
         @JavascriptInterface public void dataChanged(String snapshotJson) {
             Store.saveSnapshot(MainActivity.this, snapshotJson);
             CalendarWidget.renderAll(MainActivity.this, null);
+            Reminders.schedule(MainActivity.this);
+            // 다른 기기에서 알림을 골라 둔 경우: 처음 한 번만 알림 권한을 물어봄
+            if (!Reminders.items(MainActivity.this).isEmpty()) askPermission(false);
         }
+
+        /** 내 달력에서 알림을 고르고 저장했을 때 */
+        @JavascriptInterface public void askNotifyPermission() { askPermission(true); }
 
         /** 로그아웃 */
         @JavascriptInterface public void loggedOut() {
             Store.prefs(MainActivity.this).edit().remove("snapshot").commit();
             CalendarWidget.renderAll(MainActivity.this, null);
+            Reminders.clear(MainActivity.this);
         }
+    }
+
+    /** 알림 권한 (안드로이드 13 이상은 물어봐야 함). userAction: 사용자가 방금 알림을 골랐음 */
+    void askPermission(final boolean userAction) {
+        runOnUiThread(new Runnable() {
+            public void run() {
+                NotificationManager nm = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
+                boolean granted = Build.VERSION.SDK_INT < 33
+                        ? nm == null || nm.areNotificationsEnabled()
+                        : checkSelfPermission("android.permission.POST_NOTIFICATIONS") == PackageManager.PERMISSION_GRANTED
+                          && (nm == null || nm.areNotificationsEnabled());
+                if (granted) return;
+                boolean askedBefore = Store.prefs(MainActivity.this).getBoolean("notify_asked", false);
+                if (Build.VERSION.SDK_INT >= 33
+                        && checkSelfPermission("android.permission.POST_NOTIFICATIONS") != PackageManager.PERMISSION_GRANTED
+                        && (!askedBefore || shouldShowRequestPermissionRationale("android.permission.POST_NOTIFICATIONS"))) {
+                    Store.prefs(MainActivity.this).edit().putBoolean("notify_asked", true).commit();
+                    requestPermissions(new String[] { "android.permission.POST_NOTIFICATIONS" }, 1);
+                    return;
+                }
+                if (!userAction) return;
+                // 예전에 거절했거나 설정에서 꺼 둔 경우: 설정 화면으로 안내
+                Toast.makeText(MainActivity.this, "알림을 받으려면 「알림 허용」을 켜 주세요", Toast.LENGTH_LONG).show();
+                try {
+                    Intent i = new Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS);
+                    i.putExtra(Settings.EXTRA_APP_PACKAGE, getPackageName());
+                    startActivity(i);
+                } catch (Exception ignored) {}
+            }
+        });
     }
 }
