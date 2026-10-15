@@ -285,6 +285,9 @@ button { font: inherit; color: inherit; }
 .cell.today .num { background: var(--accent); color: var(--accent-text) !important; }
 .hol { display: none; font-size: 11px; color: #D9473B; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 @media (prefers-color-scheme: dark) { .hol { color: #F07B6E; } }
+.lunar { display: none; font-size: 9.5px; color: var(--muted); white-space: nowrap; flex: none; font-variant-numeric: tabular-nums; }
+.lunar.key { display: inline; }
+.day-lunar { font-size: 13px; font-weight: 400; color: var(--muted); }
 .ev {
   display: block; font-size: 10.5px; line-height: 1.4; padding: 0 4px; border-radius: 4px;
   background: var(--c); color: #fff; white-space: nowrap; overflow: hidden; text-overflow: clip; font-weight: 550;
@@ -319,6 +322,7 @@ button { font: inherit; color: inherit; }
   .cell { min-height: 92px; padding: 6px 4px; }
   .ev { font-size: 12px; padding: 1px 6px; }
   .hol { display: inline; }
+  .lunar { display: inline; font-size: 10.5px; }
   .cal-scroll { padding: 0 16px 96px; }
 }
 
