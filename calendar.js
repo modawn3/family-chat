@@ -2,9 +2,23 @@
 // 날짜는 모두 "YYYY-MM-DD" 문자열로 다뤄요 (시간대 문제 없이 한국 날짜 그대로).
 
 import { lunarOf, lunarShort, lunarLong } from "./lunar.js";
+import { seriesDates } from "./repeat.js";
 
 export const WEEK = ["일", "월", "화", "수", "목", "금", "토"];
-const REPEAT_LABEL = { none: "", weekly: "매주", monthly: "매월", yearly: "매년" };
+const REPEAT_LABEL = { none: "", weekly: "매주", monthly: "매월", yearly: "매년", lunar_yearly: "매년(음력)" };
+// "매주 월·수", "매년 음력 9월 5일" 처럼 반복을 글자로
+export function repeatText(ev) {
+  if (!ev.repeat || ev.repeat === "none") return "";
+  if (ev.repeat === "weekly" && ev.weekdays?.length) {
+    const days = [...ev.weekdays].sort((a, b) => a - b);
+    return days.length === 7 ? "매일" : "매주 " + days.map((i) => WEEK[i]).join("·");
+  }
+  if (ev.repeat === "lunar_yearly") {
+    const l = lunarOf(ev.start_date);
+    return l ? `매년 음력 ${l.m}월 ${l.d}일` : "매년(음력)";
+  }
+  return REPEAT_LABEL[ev.repeat] || "";
+}
 // 양력 고정 공휴일 (설날·추석 등 음력 명절은 일정으로 등록해 주세요)
 const HOLIDAYS = {
   "01-01": "신정", "03-01": "삼일절", "05-05": "어린이날", "06-06": "현충일",
@@ -42,7 +56,13 @@ export function occurrences(ev, from, to) {
   const out = [];
   const hit = (s) => s >= ev.start_date && s <= to && addDays(s, dur) >= from;
 
-  if (ev.repeat === "weekly") {
+  if ((ev.repeat === "weekly" && ev.weekdays?.length) || ev.repeat === "lunar_yearly") {
+    // 여러 요일 매주 / 음력 매년: 날짜를 하루씩 보며 고름 (repeat.js 와 같은 계산)
+    const a = addDays(from, -dur);
+    for (const s of seriesDates({ kind: ev.repeat, weekdays: ev.weekdays, start_date: ev.start_date }, a > ev.start_date ? a : ev.start_date, to)) {
+      if (hit(s)) out.push(s);
+    }
+  } else if (ev.repeat === "weekly") {
     let k = Math.max(0, Math.floor((diffDays(ev.start_date, from) - dur) / 7));
     for (let s = addDays(ev.start_date, 7 * k); s <= to; k++, s = addDays(ev.start_date, 7 * k)) {
       if (hit(s)) out.push(s);
@@ -92,7 +112,7 @@ export function whenText(ev) {
   let s = dateLabel(ev.start_date);
   if (ev.end_date !== ev.start_date) s += ` ~ ${dateLabel(ev.end_date)}`;
   if (!ev.all_day) s += ` ${timeText(ev)}`;
-  if (ev.repeat && ev.repeat !== "none") s += ` · ${REPEAT_LABEL[ev.repeat]} 반복`;
+  if (ev.repeat && ev.repeat !== "none") s += ` · ${repeatText(ev)} 반복`;
   return s;
 }
 
@@ -119,7 +139,7 @@ export function createCalendar({ sb, getMemberNames, onAnnounce, onChange, toast
     dialog: $("#event-dialog"), form: $("#event-form"), dlgTitle: $("#ev-dialog-title"),
     fTitle: $("#ev-title"), fStart: $("#ev-start"), fEnd: $("#ev-end"), fAllDay: $("#ev-allday"),
     fTimes: $("#ev-times"), fSTime: $("#ev-stime"), fETime: $("#ev-etime"), fWho: $("#ev-who"),
-    fRepeat: $("#ev-repeat"), fMemo: $("#ev-memo"), fAnnounce: $("#ev-announce"),
+    fRepeat: $("#ev-repeat"), fDays: $("#ev-days"), fDaysBox: $("#ev-days-box"), fRepeatHint: $("#ev-repeat-hint"), fMemo: $("#ev-memo"), fAnnounce: $("#ev-announce"),
     fAnnounceText: $("#ev-announce-text"), fDelete: $("#ev-delete"), fSave: $("#ev-save"),
   };
   const now = parse(todayStr());
@@ -310,7 +330,7 @@ export function createCalendar({ sb, getMemberNames, onAnnounce, onChange, toast
       if (ev.end_date !== ev.start_date) {
         when.textContent += ` · ${parse(ev.start_date).m}/${parse(ev.start_date).d}~${parse(ev.end_date).m}/${parse(ev.end_date).d}`;
       }
-      if (ev.repeat !== "none") when.textContent += ` · 🔁 ${REPEAT_LABEL[ev.repeat]}`;
+      if (ev.repeat !== "none") when.textContent += ` · 🔁 ${repeatText(ev)}`;
 
       const title = document.createElement("div");
       title.className = "item-title";
@@ -414,6 +434,33 @@ export function createCalendar({ sb, getMemberNames, onAnnounce, onChange, toast
     el.fTimes.hidden = el.fAllDay.checked;
   }
 
+  // 반복: 매주면 요일 고르기, 음력이면 몇 월 며칠인지 보여주기
+  el.fDays.replaceChildren(...WEEK.map((n, i) => {
+    const label = document.createElement("label");
+    label.className = "chip";
+    label.style.setProperty("--c", "var(--accent)");
+    const input = document.createElement("input");
+    input.type = "checkbox";
+    input.value = String(i);
+    const span = document.createElement("span");
+    span.textContent = n;
+    label.append(input, span);
+    return label;
+  }));
+  const pickedDays = () => [...el.fDays.querySelectorAll("input:checked")].map((i) => Number(i.value));
+  function setDays(days) {
+    el.fDays.querySelectorAll("input").forEach((i) => { i.checked = days.includes(Number(i.value)); });
+  }
+  function syncRepeat() {
+    const r = el.fRepeat.value, start = el.fStart.value;
+    el.fDaysBox.hidden = r !== "weekly";
+    if (r === "weekly" && !pickedDays().length && start) setDays([dow(start)]);
+    const text = r === "none" || !start ? "" : repeatText({ repeat: r, start_date: start, weekdays: r === "weekly" ? pickedDays() : null });
+    el.fRepeatHint.textContent = text ? `${text} 반복돼요` : "";
+  }
+  el.fRepeat.addEventListener("change", syncRepeat);
+  el.fDays.addEventListener("change", syncRepeat);
+
   function openEditor(ev, day) {
     st.editing = ev || null;
     el.dlgTitle.textContent = ev ? "일정 수정" : "일정 추가";
@@ -426,12 +473,14 @@ export function createCalendar({ sb, getMemberNames, onAnnounce, onChange, toast
     el.fETime.value = ev?.end_time?.slice(0, 5) ?? "";
     buildWhoChips(ev?.who ?? []);
     el.fRepeat.value = ev?.repeat ?? "none";
+    setDays(ev?.weekdays?.length ? ev.weekdays : [dow(el.fStart.value)]);
     el.fMemo.value = ev?.memo ?? "";
     el.fAnnounce.checked = !ev;
     el.fAnnounceText.textContent = ev ? "채팅방에 변경 알리기" : "채팅방에 알리기";
     el.fDelete.hidden = !ev;
     el.fSave.disabled = false;
     syncTimes();
+    syncRepeat();
     el.dialog.showModal();
     el.form.scrollTop = 0;
     if (!matchMedia("(pointer: coarse)").matches) el.fTitle.focus();
@@ -442,6 +491,7 @@ export function createCalendar({ sb, getMemberNames, onAnnounce, onChange, toast
   el.fStart.addEventListener("change", () => {
     el.fEnd.min = el.fStart.value;
     if (!el.fEnd.value || el.fEnd.value < el.fStart.value) el.fEnd.value = el.fStart.value;
+    syncRepeat();
   });
   $("#ev-cancel").addEventListener("click", () => el.dialog.close());
   el.dialog.addEventListener("click", (e) => { if (e.target === el.dialog) el.dialog.close(); });
@@ -469,6 +519,13 @@ export function createCalendar({ sb, getMemberNames, onAnnounce, onChange, toast
       repeat: el.fRepeat.value,
       memo: el.fMemo.value.trim() || null,
     };
+    if (payload.repeat === "weekly") {
+      const days = pickedDays();
+      if (!days.length) return toast("반복할 요일을 하나 이상 골라 주세요.");
+      // 시작하는 날 요일 하나만이면 예전처럼 비워 둠 (업데이트 7 전 DB 와도 맞음)
+      if (!(days.length === 1 && days[0] === dow(start_date))) payload.weekdays = days;
+      else if (editing?.weekdays) payload.weekdays = null;
+    } else if (editing?.weekdays) payload.weekdays = null;
     const announce = el.fAnnounce.checked;
     const editing = st.editing;
 

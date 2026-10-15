@@ -170,8 +170,14 @@
           <option value="weekly">매주</option>
           <option value="monthly">매월</option>
           <option value="yearly">매년 (생일·기념일)</option>
+          <option value="lunar_yearly">매년 음력 (음력 생일·제사)</option>
         </select>
       </label>
+      <div id="ev-days-box" class="field" hidden>
+        <span>반복할 요일 <small>(여러 개 고를 수 있어요)</small></span>
+        <div id="ev-days" class="chips"></div>
+      </div>
+      <p id="ev-repeat-hint" class="repeat-hint"></p>
 
       <label class="field">메모
         <textarea id="ev-memo" rows="2" maxlength="1000" placeholder="장소, 준비물 등"></textarea>
