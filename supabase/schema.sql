@@ -246,16 +246,16 @@ create policy "family can read members"  on chat.family_members for select to au
 create policy "family can read messages" on chat.messages for select to authenticated
   using (chat.is_family());
 create policy "family can send messages" on chat.messages for insert to authenticated
-  with check (chat.is_family() and user_id = auth.uid());
+  with check (chat.is_family() and user_id = (select auth.uid()));
 create policy "delete own messages"      on chat.messages for delete to authenticated
-  using (user_id = auth.uid());
+  using (user_id = (select auth.uid()));
 create policy "family can read status"   on chat.read_status for select to authenticated
   using (chat.is_family());
 -- 일정은 가족 누구나 추가/수정/삭제할 수 있어요
 create policy "family can read events"   on chat.events for select to authenticated
   using (chat.is_family());
 create policy "family can add events"    on chat.events for insert to authenticated
-  with check (chat.is_family() and created_by = auth.uid());
+  with check (chat.is_family() and created_by = (select auth.uid()));
 create policy "family can edit events"   on chat.events for update to authenticated
   using (chat.is_family()) with check (chat.is_family());
 create policy "family can delete events" on chat.events for delete to authenticated
@@ -406,9 +406,9 @@ drop policy if exists "read holidays" on public.holidays;
 drop policy if exists "read weather"  on public.weather;
 
 create policy "own events" on public.events for all to authenticated
-  using (user_id = auth.uid()) with check (user_id = auth.uid());
+  using (user_id = (select auth.uid())) with check (user_id = (select auth.uid()));
 create policy "own memos" on public.memos for all to authenticated
-  using (user_id = auth.uid()) with check (user_id = auth.uid());
+  using (user_id = (select auth.uid())) with check (user_id = (select auth.uid()));
 create policy "read holidays" on public.holidays for select to authenticated using (true);
 create policy "read weather"  on public.weather  for select to authenticated using (true);
 
@@ -444,7 +444,7 @@ create index if not exists events_series on public.events (series_id, date);
 alter table public.event_series enable row level security;
 drop policy if exists "own series" on public.event_series;
 create policy "own series" on public.event_series for all to authenticated
-  using (user_id = auth.uid()) with check (user_id = auth.uid());
+  using (user_id = (select auth.uid())) with check (user_id = (select auth.uid()));
 revoke all on public.event_series from anon, authenticated;
 grant select, insert, update, delete on public.event_series to authenticated;
 grant all on public.event_series to service_role;
@@ -467,7 +467,7 @@ create index if not exists todos_user on public.todos (user_id, done, due);
 alter table public.todos enable row level security;
 drop policy if exists "own todos" on public.todos;
 create policy "own todos" on public.todos for all to authenticated
-  using (user_id = auth.uid()) with check (user_id = auth.uid());
+  using (user_id = (select auth.uid())) with check (user_id = (select auth.uid()));
 revoke all on public.todos from anon, authenticated;
 grant select, insert, update, delete on public.todos to authenticated;
 grant all on public.todos to service_role;
@@ -544,3 +544,6 @@ select cron.schedule('sync-holidays-daily', '0 18 * * *',
 -- 날씨: 예전 개인 달력 프로젝트와 같은 시각 (3시간마다, 20분)
 select cron.schedule('sync-weather', '20 2,5,8,11,14,17,20,23 * * *',
   $$ select chat.call_cron_function('sync-weather') $$);
+-- 자동 작업 실행 기록은 일주일만 남김 (업데이트 009)
+select cron.schedule('cleanup-cron-history', '30 19 * * 6',
+  $$ delete from cron.job_run_details where end_time < now() - interval '7 days' $$);
