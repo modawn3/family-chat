@@ -24,14 +24,30 @@ public final class Api {
             String access = validAccessToken(c);
             if (access == null) return NOT_LOGGED_IN;
 
-            JSONArray events = get(access, "/rest/v1/events?select=id,date,title,start_time,cat&order=date");
+            // 오늘 기준 100일 전 ~ 200일 후 (반복 일정이 많아도 한 번에 받는 1000개를 넘지 않게)
+            java.text.SimpleDateFormat f = new java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US);
+            long day = 86400000L, now = System.currentTimeMillis();
+            String range = "&date=gte." + f.format(new java.util.Date(now - 100 * day)) + "&date=lte." + f.format(new java.util.Date(now + 200 * day));
+            // remind(알림) 칸은 업데이트 008 이후에만 있음 → 없으면 빼고 다시 받기
+            JSONArray events = getOr(access,
+                    "/rest/v1/events?select=id,date,title,start_time,cat,remind&order=date" + range,
+                    "/rest/v1/events?select=id,date,title,start_time,cat&order=date" + range);
             JSONArray memos = get(access, "/rest/v1/memos?select=id,date,title,body,cat&date=not.is.null");
             JSONArray holidays = get(access, "/rest/v1/holidays?select=date,name");
             JSONArray weather = get(access, "/rest/v1/weather?select=date,code,tmin,tmax");
+            JSONArray todos;
+            try {
+                todos = get(access, "/rest/v1/todos?select=id,title,due,cat,remind&done=eq.false&due=not.is.null");
+            } catch (AuthException e) {
+                throw e;
+            } catch (Exception e) {
+                todos = new JSONArray();     // 할 일(업데이트 006)·알림(008) 전이면 빈 목록
+            }
 
             JSONObject snap = new JSONObject();
             snap.put("events", events);
             snap.put("memos", memos);
+            snap.put("todos", todos);
             JSONObject h = new JSONObject();
             for (int i = 0; i < holidays.length(); i++) {
                 JSONObject o = holidays.getJSONObject(i);
@@ -47,6 +63,7 @@ public final class Api {
             snap.put("updated", System.currentTimeMillis());
             Store.saveSnapshot(c, snap.toString());
             Store.setLastError(c, null);
+            Reminders.schedule(c);
             return OK;
         } catch (AuthException e) {
             return NOT_LOGGED_IN;
@@ -99,6 +116,17 @@ public final class Api {
         if (code == 401) throw new AuthException();
         if (code != 200) throw new Exception(path + " " + code);
         return new JSONArray(read(con.getInputStream()));
+    }
+
+    /** 첫 주소가 400(칸 없음 등)이면 두 번째 주소로 */
+    private static JSONArray getOr(String access, String path, String fallback) throws Exception {
+        try {
+            return get(access, path);
+        } catch (AuthException e) {
+            throw e;
+        } catch (Exception e) {
+            return get(access, fallback);
+        }
     }
 
     private static HttpURLConnection open(String path, String access) throws Exception {
