@@ -157,6 +157,22 @@ a.btn { color: var(--ink); text-decoration: none; display: inline-flex; align-it
 .item .n { font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .item.memo { grid-template-columns: minmax(0, 1fr) auto; }
 .item.memo .meta { font-size: 11px; color: var(--muted); white-space: nowrap; }
+/* 할 일 */
+.todo { display: flex; align-items: stretch; border: 1px solid var(--line); border-left: 4px solid var(--c, var(--line)); border-radius: 8px; background: var(--surface); }
+.todo .tick { flex: none; width: 42px; border: 0; background: none; display: grid; place-items: center; padding: 0; }
+.todo .tick i { width: 18px; height: 18px; border: 2px solid var(--muted); border-radius: 5px; display: grid; place-items: center; font-style: normal; font-size: 12px; line-height: 1; color: transparent; }
+.todo.done .tick i { background: var(--accent); border-color: var(--accent); color: var(--surface); }
+.todo .body { flex: 1; min-width: 0; border: 0; background: none; text-align: left; padding: 8px 10px 8px 0; display: flex; flex-direction: column; gap: 2px; }
+.todo .body:hover, .todo .tick:hover { background: var(--surface-2); }
+.todo .t { font-weight: 500; overflow-wrap: anywhere; }
+.todo .n { font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.todo .n .late { color: var(--holiday); font-weight: 600; }
+.todo.done .t { text-decoration: line-through; color: var(--muted); font-weight: 400; }
+.todo-done summary { cursor: pointer; font-size: 13px; color: var(--muted); padding: 4px 0; }
+.todo-done[open] summary { margin-bottom: 6px; }
+.todo-done .btn { margin-top: 8px; }
+.todo-chip::before { content: "☐ "; }
+#todoDue[aria-invalid="true"] { border-color: var(--holiday); }
 .empty { color: var(--muted); font-size: 13px; padding: 14px; border: 1px dashed var(--line); border-radius: 8px; text-align: center; }
 
 form.editor { display: flex; flex-direction: column; gap: 10px; border-top: 1px solid var(--line); padding-top: 14px; }
@@ -251,6 +267,7 @@ html, body { margin: 0; }
     <div class="tabs" role="tablist">
       <button class="tab" role="tab" id="tabDay" aria-selected="true">일정</button>
       <button class="tab" role="tab" id="tabMemo" aria-selected="false">메모장</button>
+      <button class="tab" role="tab" id="tabTodo" aria-selected="false" hidden>할 일</button>
     </div>
 
     <!-- 일정 탭 -->
@@ -293,6 +310,32 @@ html, body { margin: 0; }
           <button type="button" class="btn" id="evCancel" hidden>취소</button>
           <span class="spacer"></span>
           <button type="button" class="btn danger" id="evDelete" hidden>삭제</button>
+        </div>
+      </form>
+    </div>
+
+    <!-- 할 일 탭 -->
+    <div class="pane" id="paneTodo" hidden>
+      <div class="list" id="todoList"></div>
+      <details class="todo-done" id="todoDoneBox" hidden>
+        <summary id="todoDoneSum"></summary>
+        <div class="list" id="todoDoneList"></div>
+        <button type="button" class="btn danger" id="todoClear">완료한 일 모두 지우기</button>
+      </details>
+      <form class="editor" id="todoForm" autocomplete="off">
+        <h3 id="todoFormTitle">새 할 일</h3>
+        <div class="field"><label for="todoTitle">할 일</label><input type="text" id="todoTitle" placeholder="예: 보고서 제출" required maxlength="120"></div>
+        <div class="row">
+          <div class="field" style="flex: 1 1 140px"><label for="todoDue">마감일 (선택)</label><input type="text" id="todoDue" inputmode="numeric" maxlength="10" placeholder="예: 1020 · 비우면 마감 없음"></div>
+          <div class="field" style="flex: 0 0 auto; justify-content: flex-end"><button type="button" class="btn" id="todoDueSel">선택한 날짜</button></div>
+        </div>
+        <div class="field"><span class="lbl">분류</span><div class="cats" id="todoCats"></div></div>
+        <div class="field"><label for="todoNote">메모</label><textarea id="todoNote" placeholder="필요하면 자세한 내용"></textarea></div>
+        <div class="actions">
+          <button type="submit" class="btn primary" id="todoSave">추가</button>
+          <button type="button" class="btn" id="todoCancel" hidden>취소</button>
+          <span class="spacer"></span>
+          <button type="button" class="btn danger" id="todoDelete" hidden>삭제</button>
         </div>
       </form>
     </div>
@@ -388,10 +431,10 @@ const sb = createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY, {
 });
 
 const state = {
-  events: [], memos: [],
+  events: [], memos: [], todos: [], todoOk: false,   // todoOk: 업데이트 6 전이면 false → 할 일 탭 숨김
   view: new Date(), selected: ymd(new Date()),
   filter: { work: true, personal: true, etc: true },
-  editingEvent: null, editingMemo: null, memoQuery: "",
+  editingEvent: null, editingMemo: null, editingTodo: null, memoQuery: "",
   holidaysUpdated: null, weather: {},
   series: {}, seriesOk: false          // 고정(반복) 일정 규칙 (업데이트 5 전이면 seriesOk=false → 반복 입력 숨김)
 };
@@ -400,11 +443,13 @@ state.view.setDate(1);
 // 앱 안의 이름 <-> 테이블 칸 이름 변환
 const toRow = {
   events: e => ({ id: e.id, date: e.date, title: e.title, start_time: e.start || null, end_time: e.end || null, cat: e.cat, note: e.note || null, updated_at: new Date().toISOString() }),
-  memos:  m => ({ id: m.id, title: m.title || null, body: m.body || null, cat: m.cat, date: m.date || null, updated_at: new Date().toISOString() })
+  memos:  m => ({ id: m.id, title: m.title || null, body: m.body || null, cat: m.cat, date: m.date || null, updated_at: new Date().toISOString() }),
+  todos:  t => ({ id: t.id, title: t.title, done: !!t.done, done_at: t.doneAt ? new Date(t.doneAt).toISOString() : null, due: t.due || null, cat: t.cat, note: t.note || null, updated_at: new Date().toISOString() })
 };
 const fromRow = {
   events: r => ({ id: r.id, date: r.date, title: r.title, start: r.start_time || "", end: r.end_time || "", cat: r.cat, note: r.note || "", seriesId: r.series_id || null, updatedAt: Date.parse(r.updated_at) }),
-  memos:  r => ({ id: r.id, title: r.title || "", body: r.body || "", cat: r.cat, date: r.date || "", createdAt: Date.parse(r.created_at), updatedAt: Date.parse(r.updated_at) })
+  memos:  r => ({ id: r.id, title: r.title || "", body: r.body || "", cat: r.cat, date: r.date || "", createdAt: Date.parse(r.created_at), updatedAt: Date.parse(r.updated_at) }),
+  todos:  r => ({ id: r.id, title: r.title, done: r.done, doneAt: r.done_at ? Date.parse(r.done_at) : null, due: r.due || "", cat: r.cat, note: r.note || "", createdAt: Date.parse(r.created_at), updatedAt: Date.parse(r.updated_at) })
 };
 
 
@@ -421,10 +466,10 @@ function needsRange(view) {
 // 아주 작은 요청 3개로 "바뀐 게 있는지" 확인 (개수 + 마지막 수정 시각)
 async function changeSignature() {
   const q = t => sb.from(t).select("updated_at", { count: "exact" }).order("updated_at", { ascending: false }).limit(1);
-  const [e, m, w] = await Promise.all([q("events"), q("memos"), q("weather")]);
+  const [e, m, w, t] = await Promise.all([q("events"), q("memos"), q("weather"), q("todos")]);
   if (e.error || m.error) return null;
   const top = r => (r.data && r.data[0] ? r.data[0].updated_at : "");
-  return JSON.stringify([e.count, top(e), m.count, top(m), w.error ? "" : top(w)]);
+  return JSON.stringify([e.count, top(e), m.count, top(m), w.error ? "" : top(w), t.error ? "" : [t.count, top(t)]]);
 }
 
 const Store = {
@@ -447,12 +492,13 @@ const Store = {
       this.mode = "cloud"; showStatus(); return;      // 바뀐 것 없음
     }
     const [from, to] = monthRange(state.view, 2, 3);   // 보고 있는 달 기준 2달 전 ~ 3달 후
-    const [ev, me, ho, wx, se] = await Promise.all([
+    const [ev, me, ho, wx, se, td] = await Promise.all([
       sb.from("events").select("*").gte("date", from).lte("date", to),
       sb.from("memos").select("*"),
       (force || holidaysDue) ? sb.from("holidays").select("date,name,updated_at") : Promise.resolve(null),
       sb.from("weather").select("date,code,wf,tmin,tmax,pop"),
-      sb.from("event_series").select("*")
+      sb.from("event_series").select("*"),
+      sb.from("todos").select("*")
     ]);
     if (ev.error || me.error) { this.mode = "error"; showStatus(); return; }
     Sync.sig = sig; Sync.from = from; Sync.to = to; Sync.ready = true;
@@ -475,8 +521,11 @@ const Store = {
     state.seriesOk = !se.error;
     if (!se.error) { state.series = {}; se.data.forEach(x => state.series[x.id] = x); }
     document.getElementById("evRepeatRow").hidden = !state.seriesOk;
+    state.todoOk = !td.error;
+    if (!td.error) state.todos = td.data.map(fromRow.todos);
+    document.getElementById("tabTodo").hidden = !state.todoOk;
     this.mode = "cloud";
-    showStatus(); render(); renderMemos();
+    showStatus(); render(); renderMemos(); renderTodos();
     Repeat.extend();
   },
 
@@ -617,7 +666,7 @@ document.getElementById("loginForm").addEventListener("submit", async e => {
 });
 document.getElementById("logoutBtn").addEventListener("click", async () => {
   await sb.auth.signOut();
-  state.events = []; state.memos = [];
+  state.events = []; state.memos = []; state.todos = [];
   showApp(null);
 });
 
@@ -663,6 +712,9 @@ const wxLine = w => [w.wf, wxTemp(w).replace("/", " / "), w.pop != null ? `강�
 function memosOn(dateStr) {
   return state.memos.filter(m => m.date === dateStr && state.filter[m.cat] !== false);
 }
+function todosOn(dateStr) {
+  return state.todos.filter(t => !t.done && t.due === dateStr && state.filter[t.cat] !== false);
+}
 const memoLabel = m => m.title || (m.body || "").split("\n")[0] || "제목 없음";
 
 function renderCalendar() {
@@ -695,7 +747,8 @@ function renderCalendar() {
 
     const evs = eventsOn(key);
     const mms = memosOn(key);
-    cell.setAttribute("aria-label", `${d.getMonth() + 1}월 ${d.getDate()}일 ${DOW_KO[d.getDay()]}요일${hol ? ", " + hol : ""}${evs.length ? ", 일정 " + evs.length + "개" : ""}${mms.length ? ", 메모 " + mms.length + "개" : ""}`);
+    const tds = todosOn(key);
+    cell.setAttribute("aria-label", `${d.getMonth() + 1}월 ${d.getDate()}일 ${DOW_KO[d.getDay()]}요일${hol ? ", " + hol : ""}${evs.length ? ", 일정 " + evs.length + "개" : ""}${tds.length ? ", 할 일 " + tds.length + "개" : ""}${mms.length ? ", 메모 " + mms.length + "개" : ""}`);
 
     const top = document.createElement("div");
     top.className = "top";
@@ -717,6 +770,7 @@ function renderCalendar() {
 
     const chips = [
       ...evs.map(e => ({ cls: "ev", cat: e.cat, text: (e.start ? e.start + " " : "") + e.title })),
+      ...tds.map(t => ({ cls: "ev todo-chip", cat: t.cat, text: t.title })),
       ...mms.map(m => ({ cls: "ev memo-chip", cat: m.cat, text: "메모 · " + memoLabel(m) }))
     ];
     chips.slice(0, 3).forEach(c => {
@@ -753,7 +807,8 @@ function renderDay() {
   const list = document.getElementById("dayList");
   const evs = eventsOn(state.selected);
   const mms = memosOn(state.selected);
-  if (!evs.length && !mms.length) {
+  const tds = todosOn(state.selected);
+  if (!evs.length && !mms.length && !tds.length) {
     list.innerHTML = '<div class="empty">이 날은 일정이 없어요.<br>아래에서 바로 추가할 수 있어요.</div>';
     return;
   }
@@ -768,7 +823,17 @@ function renderDay() {
     b.addEventListener("click", () => { switchTab("memo"); editMemo(m.id); });
     return b;
   });
-  list.replaceChildren(...memoItems, ...evs.map(e => {
+  const todoItems = tds.map(t => {
+    const b = document.createElement("button");
+    b.type = "button"; b.className = "item"; b.style.setProperty("--c", catColor(t.cat));
+    const tm = document.createElement("span"); tm.className = "time"; tm.textContent = "할 일";
+    const title = document.createElement("span"); title.className = "t"; title.textContent = "☐ " + t.title;
+    const note = document.createElement("span"); note.className = "n"; note.textContent = "마감 · " + (CATS.find(c => c.id === t.cat) || CATS[2]).name + (t.note ? " · " + t.note.split("\n")[0] : "");
+    b.append(tm, title, note);
+    b.addEventListener("click", () => { switchTab("todo"); editTodo(t.id); });
+    return b;
+  });
+  list.replaceChildren(...todoItems, ...memoItems, ...evs.map(e => {
     const b = document.createElement("button");
     b.type = "button"; b.className = "item"; b.style.setProperty("--c", catColor(e.cat));
     const t = document.createElement("span"); t.className = "time";
@@ -813,6 +878,83 @@ function renderMemos() {
   }));
 }
 
+/* 할 일 목록: 안 한 일(마감 빠른 순, 마감 없는 일은 뒤) + 완료한 일(접어 둠) */
+function dueText(t) {
+  if (!t.due) return null;
+  const d = parseYmd(t.due), today = parseYmd(ymd(new Date()));
+  const diff = Math.round((d - today) / 86400000);
+  const base = `${d.getMonth() + 1}/${d.getDate()}(${DOW_KO[d.getDay()]})`;
+  if (t.done) return { text: "마감 " + base };
+  if (diff < 0) return { text: `${base} · ${-diff}일 지남`, late: true };
+  if (diff === 0) return { text: "오늘까지", late: true };
+  if (diff === 1) return { text: "내일까지" };
+  return { text: `${base}까지 · ${diff}일 남음` };
+}
+function todoRow(t) {
+  const row = document.createElement("div");
+  row.className = "todo" + (t.done ? " done" : ""); row.style.setProperty("--c", catColor(t.cat));
+  const tick = document.createElement("button");
+  tick.type = "button"; tick.className = "tick";
+  tick.setAttribute("aria-label", t.done ? "완료 취소" : "완료");
+  tick.innerHTML = "<i>✓</i>";
+  tick.addEventListener("click", () => toggleTodo(t.id));
+  const body = document.createElement("button");
+  body.type = "button"; body.className = "body";
+  const title = document.createElement("span"); title.className = "t"; title.textContent = t.title;
+  const n = document.createElement("span"); n.className = "n";
+  const due = dueText(t);
+  if (due) { const s = document.createElement("span"); s.textContent = due.text; if (due.late) s.className = "late"; n.append(s, " · "); }
+  n.append((CATS.find(c => c.id === t.cat) || CATS[2]).name + (t.note ? " · " + t.note.split("\n")[0] : ""));
+  body.append(title, n);
+  body.addEventListener("click", () => editTodo(t.id));
+  row.append(tick, body);
+  return row;
+}
+function renderTodos() {
+  const vis = state.todos.filter(t => state.filter[t.cat] !== false);
+  const open = vis.filter(t => !t.done).sort((a, b) => (a.due || "9999").localeCompare(b.due || "9999") || a.createdAt - b.createdAt);
+  const done = vis.filter(t => t.done).sort((a, b) => (b.doneAt || 0) - (a.doneAt || 0));
+  const list = document.getElementById("todoList");
+  if (open.length) list.replaceChildren(...open.map(todoRow));
+  else list.innerHTML = '<div class="empty">' + (done.length ? "할 일을 모두 마쳤어요!" : "아직 할 일이 없어요.<br>아래에서 추가할 수 있어요.") + "</div>";
+  document.getElementById("todoDoneBox").hidden = !done.length;
+  document.getElementById("todoDoneSum").textContent = `완료한 일 ${done.length}개`;
+  document.getElementById("todoDoneList").replaceChildren(...done.map(todoRow));
+  const tab = document.getElementById("tabTodo");
+  tab.textContent = open.length ? `할 일 ${open.length}` : "할 일";
+}
+async function toggleTodo(id) {
+  const t = state.todos.find(x => x.id === id); if (!t) return;
+  const item = { ...t, done: !t.done, doneAt: t.done ? null : Date.now() };
+  if (state.editingTodo === id) resetTodoForm();
+  await Store.put("todos", item);
+  renderTodos(); renderCalendar(); renderDay();
+  toast(item.done ? "완료했어요" : "다시 할 일로 옮겼어요");
+}
+function resetTodoForm() {
+  state.editingTodo = null;
+  document.getElementById("todoForm").reset();
+  document.getElementById("todoDue").removeAttribute("aria-invalid");
+  setCat("todocat", "work");
+  document.getElementById("todoFormTitle").textContent = "새 할 일";
+  document.getElementById("todoSave").textContent = "추가";
+  document.getElementById("todoCancel").hidden = true;
+  disarm(document.getElementById("todoDelete")).hidden = true;
+}
+function editTodo(id) {
+  const t = state.todos.find(x => x.id === id); if (!t) return;
+  state.editingTodo = id;
+  document.getElementById("todoTitle").value = t.title;
+  document.getElementById("todoDue").value = t.due || "";
+  document.getElementById("todoNote").value = t.note || "";
+  setCat("todocat", t.cat || "etc");
+  document.getElementById("todoFormTitle").textContent = "할 일 수정";
+  document.getElementById("todoSave").textContent = "저장";
+  document.getElementById("todoCancel").hidden = false;
+  disarm(document.getElementById("todoDelete")).hidden = false;
+  document.getElementById("todoTitle").focus();
+}
+
 function renderFilters() {
   const box = document.getElementById("filters");
   box.replaceChildren(...CATS.map(c => {
@@ -820,7 +962,7 @@ function renderFilters() {
     b.type = "button"; b.className = "chip"; b.setAttribute("aria-pressed", String(state.filter[c.id]));
     b.innerHTML = `<span class="dot" style="background:${c.color}"></span>`;
     b.append(c.name);
-    b.addEventListener("click", () => { state.filter[c.id] = !state.filter[c.id]; renderFilters(); render(); renderMemos(); });
+    b.addEventListener("click", () => { state.filter[c.id] = !state.filter[c.id]; renderFilters(); render(); renderMemos(); renderTodos(); });
     return b;
   }));
 }
@@ -1070,6 +1212,49 @@ document.getElementById("memoDateSel").addEventListener("click", () => {
   const el = document.getElementById("memoDate"); el.value = state.selected; el.removeAttribute("aria-invalid");
 });
 
+/* 할 일 저장·삭제 */
+document.getElementById("todoForm").addEventListener("submit", async ev => {
+  ev.preventDefault();
+  const title = document.getElementById("todoTitle").value.trim();
+  if (!title) return;
+  const due = normalizeDate(document.getElementById("todoDue").value);
+  if (due === null) { toast("날짜는 1020, 2026-10-20, 10/20 처럼 입력해 주세요."); return; }
+  const old = state.todos.find(x => x.id === state.editingTodo);
+  const item = {
+    id: old ? old.id : uid(), title, due,
+    done: old ? old.done : false, doneAt: old ? old.doneAt : null,
+    cat: getCat("todocat"), note: document.getElementById("todoNote").value.trim(),
+    createdAt: old ? old.createdAt : Date.now(), updatedAt: Date.now()
+  };
+  resetTodoForm();
+  await Store.put("todos", item);
+  renderTodos(); renderCalendar(); renderDay();
+  toast(old ? "할 일을 저장했어요" : "할 일을 추가했어요");
+  if (!old) document.getElementById("todoTitle").focus();
+});
+document.getElementById("todoCancel").addEventListener("click", resetTodoForm);
+document.getElementById("todoDue").addEventListener("blur", e => {
+  const v = normalizeDate(e.target.value);
+  if (v === null) { e.target.setAttribute("aria-invalid", "true"); toast("날짜는 1020, 2026-10-20, 10/20 처럼 입력해 주세요."); }
+  else { e.target.value = v; e.target.removeAttribute("aria-invalid"); }
+});
+document.getElementById("todoDueSel").addEventListener("click", () => {
+  const el = document.getElementById("todoDue"); el.value = state.selected; el.removeAttribute("aria-invalid");
+});
+twoStep(document.getElementById("todoDelete"), async () => {
+  const id = state.editingTodo; if (!id) return;
+  resetTodoForm(); await Store.remove("todos", id);
+  renderTodos(); renderCalendar(); renderDay(); toast("할 일을 삭제했어요");
+});
+twoStep(document.getElementById("todoClear"), async () => {
+  const done = state.todos.filter(t => t.done);
+  state.todos = state.todos.filter(t => !t.done);
+  renderTodos();
+  const { error } = await sb.from("todos").delete().in("id", done.map(t => t.id));
+  if (error) { toast("삭제하지 못했어요. 인터넷 연결을 확인하고 다시 시도해주세요."); Store.loadAll(true); return; }
+  toast(`완료한 일 ${done.length}개를 지웠어요`);
+});
+
 function resetMemoForm() {
   state.editingMemo = null;
   document.getElementById("memoForm").reset();
@@ -1124,14 +1309,14 @@ document.getElementById("memoSearch").addEventListener("input", e => { state.mem
 
 /* 탭, 달 이동 */
 function switchTab(which) {
-  const day = which === "day";
-  document.getElementById("tabDay").setAttribute("aria-selected", String(day));
-  document.getElementById("tabMemo").setAttribute("aria-selected", String(!day));
-  document.getElementById("paneDay").hidden = !day;
-  document.getElementById("paneMemo").hidden = day;
+  for (const [k, tab, pane] of [["day", "tabDay", "paneDay"], ["memo", "tabMemo", "paneMemo"], ["todo", "tabTodo", "paneTodo"]]) {
+    document.getElementById(tab).setAttribute("aria-selected", String(k === which));
+    document.getElementById(pane).hidden = k !== which;
+  }
 }
 document.getElementById("tabDay").addEventListener("click", () => switchTab("day"));
 document.getElementById("tabMemo").addEventListener("click", () => switchTab("memo"));
+document.getElementById("tabTodo").addEventListener("click", () => switchTab("todo"));
 document.getElementById("prev").addEventListener("click", () => { state.view = new Date(state.view.getFullYear(), state.view.getMonth() - 1, 1); renderCalendar(); });
 document.getElementById("next").addEventListener("click", () => { state.view = new Date(state.view.getFullYear(), state.view.getMonth() + 1, 1); renderCalendar(); });
 document.getElementById("todayBtn").addEventListener("click", () => selectDate(ymd(new Date())));
@@ -1148,8 +1333,9 @@ function toast(msg) {
    ========================================================= */
 renderCatPicker("evCats", "evcat");
 renderCatPicker("memoCats", "memocat");
+renderCatPicker("todoCats", "todocat");
 renderFilters();
-render(); renderMemos(); showStatus();
+render(); renderMemos(); renderTodos(); showStatus();
 
 // 가족 채팅과 같은 서비스 워커를 씀 (화면 파일 캐시)
 if ("serviceWorker" in navigator) {
