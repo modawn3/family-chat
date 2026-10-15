@@ -1,6 +1,8 @@
 // 가족 달력: 월 보기, 날짜별 일정, 추가/수정/삭제, 반복 일정
 // 날짜는 모두 "YYYY-MM-DD" 문자열로 다뤄요 (시간대 문제 없이 한국 날짜 그대로).
 
+import { lunarOf, lunarShort, lunarLong } from "./lunar.js";
+
 export const WEEK = ["일", "월", "화", "수", "목", "금", "토"];
 const REPEAT_LABEL = { none: "", weekly: "매주", monthly: "매월", yearly: "매년" };
 // 양력 고정 공휴일 (설날·추석 등 음력 명절은 일정으로 등록해 주세요)
@@ -240,6 +242,14 @@ export function createCalendar({ sb, getMemberNames, onAnnounce, onChange, toast
       num.className = "num";
       num.textContent = p.d;
       head.append(num);
+      // 음력 (좁은 화면에서는 음력 1일·15일만 보임, 날짜를 누르면 위 제목에 항상 나옴)
+      const lun = lunarOf(day);
+      if (lun) {
+        const l = document.createElement("span");
+        l.className = "lunar" + (lun.d === 1 || lun.d === 15 ? " key" : "");
+        l.textContent = lunarShort(day);
+        head.append(l);
+      }
       if (hol) {
         const h = document.createElement("span");
         h.className = "hol";
@@ -270,7 +280,14 @@ export function createCalendar({ sb, getMemberNames, onAnnounce, onChange, toast
   function renderDay() {
     const day = st.selected;
     const hol = holidayOf(day);
+    const lunar = lunarLong(day);
     el.dayTitle.textContent = `${dateLabel(day)}${hol ? ` · ${hol}` : ""}${day === todayStr() ? " · 오늘" : ""}`;
+    if (lunar) {
+      const l = document.createElement("span");
+      l.className = "day-lunar";
+      l.textContent = lunar;
+      el.dayTitle.append(" ", l);
+    }
     const items = eventsOn(day);
     if (!items.length) {
       const empty = document.createElement("li");

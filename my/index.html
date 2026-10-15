@@ -123,6 +123,9 @@ a.btn { color: var(--ink); text-decoration: none; display: inline-flex; align-it
 .day-wx { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); margin-top: 4px; }
 .day-wx .wx-ico { width: 18px; height: 18px; }
 @media (max-width: 640px) { .wx span { display: none; } }
+.lunar { font-size: 10.5px; color: var(--muted); white-space: nowrap; flex: none; font-variant-numeric: tabular-nums; }
+@media (max-width: 640px) { .lunar:not(.key) { display: none; } .lunar { font-size: 9.5px; } }
+.day-lunar { font-size: 13px; font-weight: 400; color: var(--muted); }
 .hname { font-size: 11px; color: var(--holiday); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
 .ev { font-size: 12px; border-radius: 4px; padding: 1px 5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; background: color-mix(in srgb, var(--c) 14%, transparent); color: var(--ink); border-left: 3px solid var(--c); }
 .ev.memo-chip { background: transparent; border: 1px dashed var(--c); border-left: 3px solid var(--c); color: var(--muted); }
@@ -349,6 +352,7 @@ const uid = () => (crypto.randomUUID ? crypto.randomUUID() :
    ========================================================= */
 import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
 import { CONFIG } from "../config.js";
+import { lunarOf, lunarShort, lunarLong } from "../lunar.js";
 const sb = createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY, {
   auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: false }
 });
@@ -586,6 +590,9 @@ function renderCalendar() {
     const num = document.createElement("span");
     num.className = "num"; num.textContent = d.getDate();
     top.appendChild(num);
+    // 음력 (좁은 화면에서는 음력 1일·15일만, 날짜를 누르면 날짜 제목에 항상 나옴)
+    const lun = lunarOf(key);
+    if (lun) { const l = document.createElement("span"); l.className = "lunar" + (lun.d === 1 || lun.d === 15 ? " key" : ""); l.textContent = lunarShort(key); top.appendChild(l); }
     if (hol) { const h = document.createElement("span"); h.className = "hname"; h.textContent = hol; top.appendChild(h); }
     const w = state.weather[key];
     if (w && WX_ICON[w.code]) {
@@ -623,7 +630,10 @@ function renderCalendar() {
 
 function renderDay() {
   const d = parseYmd(state.selected);
-  document.getElementById("dayTitle").textContent = `${d.getMonth() + 1}월 ${d.getDate()}일 ${DOW_KO[d.getDay()]}요일`;
+  const dayTitle = document.getElementById("dayTitle");
+  dayTitle.textContent = `${d.getMonth() + 1}월 ${d.getDate()}일 ${DOW_KO[d.getDay()]}요일`;
+  const lunar = lunarLong(state.selected);
+  if (lunar) { const l = document.createElement("span"); l.className = "day-lunar"; l.textContent = lunar; dayTitle.append(" ", l); }
   document.getElementById("daySub").textContent = HOLIDAYS[state.selected] || "";
   const dw = state.weather[state.selected], dwEl = document.getElementById("dayWx");
   dwEl.hidden = !dw;
