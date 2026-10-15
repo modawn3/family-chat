@@ -68,6 +68,7 @@ supabase/move-calendar/*.sql    예전 개인 달력 프로젝트 → 이 프로
 - `memos(id, user_id, title, body, cat, date|null, updated_at)` — 본인 것만, date 가 있으면 달력에도 표시
 - `event_series(id, user_id, kind weekly|monthly|yearly|lunar_yearly, weekdays smallint[], start_date, until, made_until, title, start_time, end_time, cat, note)` — 고정(반복) 일정 규칙(업데이트 005).
   실제 날짜는 `events` 에 하루 한 줄씩(`series_id`, id 는 반복 id+날짜로 정해짐) 약 400일치 만들어 두고, 내 달력이 열릴 때 `Repeat.extend()` 가 이어 만듦 → 위젯은 고칠 필요 없음
+- `todos(id, user_id, title, done, done_at, due date|null, cat, note, updated_at)` — 할 일(업데이트 006), 본인 것만. 내 달력 「할 일」 탭, due 가 있으면 달력 칸에 ☐ 표시. 위젯에는 아직 안 나옴
 - `holidays(date PK, name, source)`, `weather(date PK, code, wf, tmin, tmax, pop, src)` — 로그인한 사람은 읽기만, 함수가 씀
 - 가족 달력(`chat.events`)도 `public.holidays` 를 읽어 공휴일 표시(없으면 양력 고정 공휴일만)
 - 쓰기할 때 항상 `updated_at` 갱신 — 개인 달력은 "개수 + 최신 updated_at" 으로 변경 여부를 확인함
