@@ -32,7 +32,8 @@ create table if not exists chat.events (
   start_time  time,
   end_time    time,
   who         text[] not null default '{}',   -- 참여하는 가족 이름 (비어 있으면 가족 모두)
-  repeat      text not null default 'none' check (repeat in ('none', 'weekly', 'monthly', 'yearly')),
+  repeat      text not null default 'none' check (repeat in ('none', 'weekly', 'monthly', 'yearly', 'lunar_yearly')),
+  weekdays    smallint[],                     -- 매주 반복할 요일 (0=일 ~ 6=토), 비면 시작일 요일
   memo        text check (char_length(memo) <= 1000),
   created_by  uuid default auth.uid() references auth.users (id) on delete set null,
   created_at  timestamptz not null default now(),
@@ -41,6 +42,11 @@ create table if not exists chat.events (
   constraint event_times check (all_day or start_time is not null)
 );
 create index if not exists events_start_idx on chat.events (start_date);
+-- 예전에 만든 DB 도 맞춰 주기 (업데이트 7)
+alter table chat.events add column if not exists weekdays smallint[];
+alter table chat.events drop constraint if exists events_repeat_check;
+alter table chat.events add constraint events_repeat_check
+  check (repeat in ('none', 'weekly', 'monthly', 'yearly', 'lunar_yearly'));
 
 -- 메시지
 create table if not exists chat.messages (
@@ -261,7 +267,7 @@ revoke all on all tables in schema chat from anon, authenticated;
 grant select                 on chat.family_members, chat.read_status to authenticated;
 grant select, insert, delete on chat.messages to authenticated;
 grant select, insert, delete on chat.events to authenticated;
-grant update (title, start_date, end_date, all_day, start_time, end_time, who, repeat, memo)
+grant update (title, start_date, end_date, all_day, start_time, end_time, who, repeat, weekdays, memo)
   on chat.events to authenticated;
 grant all on all tables    in schema chat to service_role;
 grant usage, select on all sequences in schema chat to authenticated, service_role;
