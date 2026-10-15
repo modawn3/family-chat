@@ -610,6 +610,12 @@ el.todayStrip.addEventListener("click", () => {
 });
 
 function savedTab() {
+  // 내 달력 화면의 탭에서 넘어오면 주소 끝의 #chat / #cal 로 열 탭을 정함
+  const hash = location.hash.slice(1);
+  if (hash === "chat" || hash === "cal") {
+    history.replaceState(null, "", location.pathname + location.search);
+    return hash;
+  }
   try { return localStorage.getItem("tab") === "cal" ? "cal" : "chat"; } catch { return "chat"; }
 }
 
