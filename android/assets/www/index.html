@@ -95,6 +95,9 @@ button { cursor: pointer; }
 .cell.sun .num, .cell.hol .num { color: var(--holiday); }
 .cell.sat:not(.hol) .num { color: var(--saturday); }
 .cell.today .num { box-shadow: inset 0 0 0 2px var(--today-ring); }
+.lunar { font-size: 10.5px; color: var(--muted); white-space: nowrap; flex: none; font-variant-numeric: tabular-nums; }
+@media (max-width: 640px) { .lunar:not(.key) { display: none; } .lunar { font-size: 9.5px; } }
+.day-lunar { font-size: 13px; font-weight: 400; color: var(--muted); }
 .wx-ico { width: 15px; height: 15px; flex: none; overflow: visible; }
 .wx-sun { fill: var(--wx-sun); }
 .wx-ray path, .wx-drop path { stroke-linecap: round; fill: none; }
@@ -272,6 +275,49 @@ html, body { margin: 0; }
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script>
+// 음력 날짜: 브라우저에 들어 있는 한국 음력(dangi) 달력을 씀 → 따로 표나 라이브러리가 필요 없음
+// 한국 음력을 모르는 브라우저는 중국 음력(chinese)으로 대신함(드물게 하루 차이 날 수 있음)
+const lunarFmt = (() => {
+  for (const ca of ["dangi", "chinese"]) {
+    try {
+      const f = new Intl.DateTimeFormat(`ko-KR-u-ca-${ca}`, { month: "numeric", day: "numeric", timeZone: "UTC" });
+      if (f.resolvedOptions().calendar === ca) return f;
+    } catch { /* 다음 후보 */ }
+  }
+  return null;
+})();
+const lunarCache = new Map();
+
+// "2026-10-15" → { m: 9, d: 5, leap: false } (모르는 환경이면 null)
+function lunarOf(s) {
+  if (!lunarFmt) return null;
+  if (lunarCache.has(s)) return lunarCache.get(s);
+  let out = null;
+  try {
+    const [y, mo, d] = s.split("-").map(Number);
+    const parts = lunarFmt.formatToParts(new Date(Date.UTC(y, mo - 1, d, 12)));
+    const mStr = parts.find((p) => p.type === "month")?.value || "";
+    const dStr = parts.find((p) => p.type === "day")?.value || "";
+    const m = parseInt(mStr.replace(/\D/g, ""), 10);
+    const dd = parseInt(dStr, 10);
+    if (m && dd) out = { m, d: dd, leap: /윤|bis|leap/i.test(mStr) };
+  } catch { /* 표시 안 함 */ }
+  lunarCache.set(s, out);
+  return out;
+}
+
+// 달력 칸에 쓰는 짧은 글자: "9.5", 윤달은 "윤6.1"
+function lunarShort(s) {
+  const l = lunarOf(s);
+  return l ? `${l.leap ? "윤" : ""}${l.m}.${l.d}` : "";
+}
+
+// 날짜 제목에 쓰는 글자: "음력 9월 5일", 윤달은 "음력 윤6월 1일"
+function lunarLong(s) {
+  const l = lunarOf(s);
+  return l ? `음력 ${l.leap ? "윤" : ""}${l.m}월 ${l.d}일` : "";
+}
+
 /* =========================================================
    1. 공휴일 데이터 (2026~2027, 노동절·제헌절 공휴일 지정 반영)
    다음 단계에서 공공데이터포털 특일정보 API로 자동 갱신하도록 바꿀 예정
@@ -538,6 +584,8 @@ function renderCalendar() {
     const num = document.createElement("span");
     num.className = "num"; num.textContent = d.getDate();
     top.appendChild(num);
+    const lun = lunarOf(key);
+    if (lun) { const l = document.createElement("span"); l.className = "lunar" + (lun.d === 1 || lun.d === 15 ? " key" : ""); l.textContent = lunarShort(key); top.appendChild(l); }
     if (hol) { const h = document.createElement("span"); h.className = "hname"; h.textContent = hol; top.appendChild(h); }
     const w = state.weather[key];
     if (w && WX_ICON[w.code]) {
@@ -575,7 +623,10 @@ function renderCalendar() {
 
 function renderDay() {
   const d = parseYmd(state.selected);
-  document.getElementById("dayTitle").textContent = `${d.getMonth() + 1}월 ${d.getDate()}일 ${DOW_KO[d.getDay()]}요일`;
+  const dayTitle = document.getElementById("dayTitle");
+  dayTitle.textContent = `${d.getMonth() + 1}월 ${d.getDate()}일 ${DOW_KO[d.getDay()]}요일`;
+  const lunar = lunarLong(state.selected);
+  if (lunar) { const l = document.createElement("span"); l.className = "day-lunar"; l.textContent = lunar; dayTitle.append(" ", l); }
   document.getElementById("daySub").textContent = HOLIDAYS[state.selected] || "";
   const dw = state.weather[state.selected], dwEl = document.getElementById("dayWx");
   dwEl.hidden = !dw;

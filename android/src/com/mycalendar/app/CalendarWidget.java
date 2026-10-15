@@ -102,6 +102,35 @@ public class CalendarWidget extends AppWidgetProvider {
         return String.format(Locale.US, "%04d-%02d-%02d", d.get(Calendar.YEAR), d.get(Calendar.MONTH) + 1, d.get(Calendar.DAY_OF_MONTH));
     }
 
+    /* ---------- 음력 (한국 음력 dangi, 없으면 chinese) ---------- */
+    static android.icu.util.Calendar LUNAR;
+
+    static android.icu.util.Calendar lunarCal() {
+        if (LUNAR != null) return LUNAR;
+        for (String ca : new String[]{"dangi", "chinese"}) {
+            try {
+                android.icu.util.Calendar l = android.icu.util.Calendar.getInstance(new android.icu.util.ULocale("ko_KR@calendar=" + ca));
+                if (ca.equals(l.getType())) { LUNAR = l; return l; }
+            } catch (Exception ignored) {}
+        }
+        return null;
+    }
+
+    /** "9.5", 윤달은 "윤6.1". 계산할 수 없으면 null */
+    static String lunar(Calendar d) {
+        android.icu.util.Calendar l = lunarCal();
+        if (l == null) return null;
+        try {
+            Calendar noon = (Calendar) d.clone();
+            noon.set(Calendar.HOUR_OF_DAY, 12);
+            l.setTimeInMillis(noon.getTimeInMillis());
+            boolean leap = l.get(android.icu.util.Calendar.IS_LEAP_MONTH) == 1;
+            return (leap ? "윤" : "") + (l.get(android.icu.util.Calendar.MONTH) + 1) + "." + l.get(android.icu.util.Calendar.DAY_OF_MONTH);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
     static String wxSymbol(String code) {
         if (code == null) return "";
         switch (code) {
@@ -195,7 +224,16 @@ public class CalendarWidget extends AppWidgetProvider {
 
                 // 날짜 숫자
                 int dayColor = !inMonth ? faint : (hol != null || k == 0) ? holidayColor : k == 6 ? satColor : ink;
-                v.setTextViewText(DAY[r * 7 + k], String.valueOf(d.get(Calendar.DAY_OF_MONTH)));
+                SpannableStringBuilder dn = new SpannableStringBuilder(String.valueOf(d.get(Calendar.DAY_OF_MONTH)));
+                String lu = lunar(d);
+                if (lu != null) {
+                    int s0 = dn.length();
+                    dn.append(" ").append(lu);
+                    dn.setSpan(new ForegroundColorSpan(inMonth ? muted : faint), s0, dn.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+                    dn.setSpan(new RelativeSizeSpan(0.72f), s0, dn.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+                    dn.setSpan(new android.text.style.StyleSpan(android.graphics.Typeface.NORMAL), s0, dn.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+                }
+                v.setTextViewText(DAY[r * 7 + k], dn);
                 v.setTextColor(DAY[r * 7 + k], key.equals(today) ? accent : dayColor);
                 v.setInt(CELL[r * 7 + k], "setBackgroundResource", key.equals(today) ? R.drawable.cell_today : R.drawable.cell_plain);
 
