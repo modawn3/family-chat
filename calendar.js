@@ -513,6 +513,7 @@ export function createCalendar({ sb, getMemberNames, onAnnounce, onChange, toast
       return toast("끝나는 시간이 시작 시간보다 빨라요.");
     }
 
+    const editing = st.editing;
     const payload = {
       title, start_date, end_date, all_day, start_time, end_time,
       who: [...el.fWho.querySelectorAll("input:checked")].map((i) => i.value),
@@ -527,7 +528,6 @@ export function createCalendar({ sb, getMemberNames, onAnnounce, onChange, toast
       else if (editing?.weekdays) payload.weekdays = null;
     } else if (editing?.weekdays) payload.weekdays = null;
     const announce = el.fAnnounce.checked;
-    const editing = st.editing;
 
     el.fSave.disabled = true;
     const q = editing
