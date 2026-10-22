@@ -23,8 +23,9 @@ const SHELL = [
 ];
 
 self.addEventListener("install", (event) => {
-  event.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL.map((u) => new Request(u, { cache: "reload" })))) // 브라우저에 남은 예전 파일 말고 새로 받기
-.then(() => self.skipWaiting()));
+  // cache: "reload" → 브라우저에 남아 있는 예전 파일 말고 서버에서 새로 받기
+  const fresh = SHELL.map((u) => new Request(u, { cache: "reload" }));
+  event.waitUntil(caches.open(CACHE).then((c) => c.addAll(fresh)).then(() => self.skipWaiting()));
 });
 
 self.addEventListener("activate", (event) => {
