@@ -1,6 +1,6 @@
 // 서비스 워커: 앱 화면 캐시 + 푸시 알림 표시
 // 앱 파일을 수정해서 다시 배포할 때는 아래 버전 숫자를 올려 주세요.
-const CACHE = "family-chat-v18";
+const CACHE = "family-chat-v19";
 // 받은 사진은 여기에 보관해서 다시 내려받지 않아요 (앱 버전이 바뀌어도 유지)
 const IMAGE_CACHE = "family-chat-images";
 const IMAGE_CACHE_MAX = 800; // 이보다 많으면 오래된 사진부터 기기에서 지움 (서버 사진은 그대로)
@@ -118,6 +118,8 @@ self.addEventListener("push", (event) => {
       tag: data.tag || "family-chat",
       renotify: !focused,
       silent: focused,
+      // 소리는 기기 설정의 기본 알림음이 나요(웹 알림은 소리 파일을 고를 수 없음). 안드로이드는 진동도 함께
+      vibrate: focused ? undefined : [200, 100, 200],
       data: { url: data.url || "./" },
     });
     if (!focused && self.navigator.setAppBadge) await self.navigator.setAppBadge().catch(() => {});

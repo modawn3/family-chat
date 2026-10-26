@@ -11,10 +11,16 @@ const readKey = (name: string) => (Deno.env.get(name) ?? "").replace(/[\s"']/g, 
 const PUSH_SECRET = readKey("PUSH_SECRET");
 const VAPID_PUBLIC_KEY = readKey("VAPID_PUBLIC_KEY");
 const VAPID_PRIVATE_KEY = readKey("VAPID_PRIVATE_KEY");
-let VAPID_SUBJECT = (Deno.env.get("VAPID_SUBJECT") ?? "").trim().replace(/^["']|["']$/g, "");
-if (VAPID_SUBJECT && !/^(mailto:|https:\/\/)/.test(VAPID_SUBJECT)) {
-  VAPID_SUBJECT = VAPID_SUBJECT.includes("@") ? `mailto:${VAPID_SUBJECT}` : "";
+// 애플은 sub 가 정확히 "mailto:이메일" 또는 https 주소가 아니면 BadJwtToken 으로 거절해요.
+// 그래서 따옴표·백틱·중복된 mailto: 를 걷어내고 이메일만 뽑아서 다시 만들어요.
+function cleanSubject(raw: string): string {
+  const v = raw.replace(/[\s"'`<>]/g, "");
+  const email = v.match(/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/);
+  if (email) return `mailto:${email[0]}`;
+  const url = v.match(/https:\/\/[^\s]+/);
+  return url ? url[0] : "";
 }
+const VAPID_SUBJECT = cleanSubject(Deno.env.get("VAPID_SUBJECT") ?? "");
 
 // 설정 문제를 사람이 읽을 수 있는 문장으로 (비밀값 자체는 절대 출력하지 않음)
 function configProblem(): string | null {
@@ -46,6 +52,27 @@ const db = createClient(
   { db: { schema: "chat" }, auth: { persistSession: false } },
 );
 
+// 점검용: 애플 서버로 가는 JWT 의 내용(서명 제외)을 보여줌
+function vapidDiag() {
+  const out: Record<string, unknown> = { subject: VAPID_SUBJECT };
+  try {
+    const h = webpush.getVapidHeaders(
+      "https://web.push.apple.com", VAPID_SUBJECT, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY, "aes128gcm",
+    );
+    const jwt = String(h.Authorization).replace(/^vapid t=/, "").split(",")[0];
+    const [head, body] = jwt.split(".");
+    const dec = (s: string) => JSON.parse(new TextDecoder().decode(
+      Uint8Array.from(atob(s.replace(/-/g, "+").replace(/_/g, "/")), (c) => c.charCodeAt(0)),
+    ));
+    out.header = dec(head);
+    out.claims = dec(body);
+    out.now = Math.floor(Date.now() / 1000);
+  } catch (e) {
+    out.error = (e as Error).message;
+  }
+  return out;
+}
+
 Deno.serve(async (req) => {
   // 브라우저로 함수 주소를 열면 설정 상태만 알려줌 (비밀값은 안 보여줌)
   if (req.method === "GET") {
@@ -59,7 +86,9 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const messageId = (await req.json()).message_id;
+    const body = await req.json();
+    if (body.diag) return Response.json(vapidDiag());
+    const messageId = body.message_id;
 
     const { data: msg, error } = await db
       .from("messages")
