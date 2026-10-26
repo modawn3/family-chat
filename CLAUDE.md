@@ -37,6 +37,7 @@ config.js           (저장소에만 있음, 이 패키지엔 없음) 공개 설
 supabase/schema.sql             전체 DB 설정 (새 프로젝트에 처음 설치할 때. 여러 번 실행해도 안전)
 supabase/migrations/00N_*.sql   기존 DB에 적용하는 변경분
 supabase/functions/send-push/index.ts   푸시 발송 함수 (Deno)
+supabase/functions/spellcheck/index.ts  채팅 「맞춤법」 버튼용 함수 → 네이버 맞춤법 검사기(비공식, passportKey 를 네이버 검색 화면에서 받아 씀). JWT 검증 꺼짐, 함수 안에서 로그인 확인. 네이버가 바뀌면 여기 고침
 tools/vapid-keys.html           VAPID 키 생성 (브라우저에서 열기)
 tools/make-stickers.py          GIF → 움직이는 WebP 이모티콘 변환 + stickers.js 등록
 docs/SETUP.md                   처음 설치 안내서 (사용자용)

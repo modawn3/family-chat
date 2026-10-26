@@ -59,6 +59,7 @@ const el = {
   tabs: document.querySelectorAll(".tabs [data-tab]"), paneChat: $("#pane-chat"), paneCal: $("#pane-cal"),
   chatDot: $("#chat-dot"), todayStrip: $("#today-strip"),
   stickerBtn: $("#btn-sticker"), stickerPanel: $("#sticker-panel"),
+  spellBtn: $("#btn-spell"), spellPanel: $("#spell-panel"), spellText: $("#spell-text"), spellCount: $("#spell-count"),
 };
 
 const state = {
@@ -690,6 +691,7 @@ function autoGrow() {
   el.input.style.height = "auto";
   el.input.style.height = Math.min(el.input.scrollHeight + 2, 140) + "px";
   el.send.disabled = !el.input.value.trim();
+  el.spellBtn.hidden = el.send.disabled;
 }
 el.input.addEventListener("input", autoGrow);
 el.input.addEventListener("keydown", (e) => {
@@ -704,6 +706,7 @@ el.composer.addEventListener("submit", (e) => { e.preventDefault(); sendText(); 
 async function sendText() {
   const text = el.input.value.trim();
   if (!text || !state.me) return;
+  closeSpell();
   el.input.value = "";
   autoGrow();
   if (isTouch) el.input.focus();
@@ -716,6 +719,65 @@ async function sendText() {
   }
   addMessages([data]);
 }
+
+// ---------------------------------------------------------------------
+// 맞춤법 검사 (Edge Function spellcheck → 네이버 맞춤법 검사기)
+// ---------------------------------------------------------------------
+const SPELL_MAX = 500;
+let spellFixed = null; // 「고치기」를 누르면 넣을 글
+let spellFor = "";     // 검사한 원래 글 (그 사이 입력창이 바뀌면 결과를 버림)
+
+function closeSpell() {
+  el.spellPanel.hidden = true;
+  spellFixed = null;
+}
+
+async function checkSpelling() {
+  const text = el.input.value.trim();
+  if (!text || el.spellBtn.disabled) return;
+  if (text.length > SPELL_MAX) { toast(`맞춤법 검사는 한 번에 ${SPELL_MAX}자까지 돼요`); return; }
+  el.spellBtn.disabled = true;
+  el.spellBtn.classList.add("busy");
+  try {
+    const { data, error } = await sb.functions.invoke("spellcheck", { body: { text } });
+    if (el.input.value.trim() !== text) return; // 검사하는 동안 글을 고쳤으면 무시
+    if (error || !data || data.error) {
+      let msg = data?.error;
+      try { msg ||= (await error?.context?.json())?.error; } catch { /* 무시 */ }
+      toast(msg || "지금은 맞춤법 검사를 할 수 없어요");
+      return;
+    }
+    if (!data.count || data.fixed === text) { closeSpell(); toast("고칠 곳이 없어요 👍"); return; }
+    spellFor = text;
+    spellFixed = data.fixed;
+    el.spellCount.textContent = `${data.count}곳`;
+    el.spellText.replaceChildren(...data.parts.map((p) => {
+      if (!p.fix) return document.createTextNode(p.t);
+      const mark = document.createElement("mark");
+      mark.textContent = p.t;
+      return mark;
+    }));
+    const nearBottom = isNearBottom();
+    el.spellPanel.hidden = false;
+    if (nearBottom) el.list.scrollTop = el.list.scrollHeight;
+  } catch {
+    toast("지금은 맞춤법 검사를 할 수 없어요");
+  } finally {
+    el.spellBtn.disabled = false;
+    el.spellBtn.classList.remove("busy");
+  }
+}
+el.spellBtn.addEventListener("click", checkSpelling);
+$("#spell-keep").addEventListener("click", () => { closeSpell(); el.input.focus(); });
+$("#spell-apply").addEventListener("click", () => {
+  if (spellFixed != null && el.input.value.trim() === spellFor) {
+    el.input.value = spellFixed;
+    autoGrow();
+  }
+  closeSpell();
+  el.input.focus();
+});
+el.input.addEventListener("input", () => { if (!el.spellPanel.hidden && el.input.value.trim() !== spellFor) closeSpell(); });
 
 el.file.addEventListener("change", () => {
   const files = [...el.file.files];

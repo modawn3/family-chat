@@ -198,6 +198,25 @@ button { font: inherit; color: inherit; }
 .send svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
 .chat.dragging .messages { outline: 2px dashed var(--accent); outline-offset: -8px; }
 
+/* ---------- 맞춤법 검사 ---------- */
+.spell-btn { position: relative; }
+.spell-btn span { font-size: 17px; font-weight: 700; line-height: 1; }
+.spell-btn svg { position: absolute; right: 4px; bottom: 5px; width: 14px; height: 14px; stroke-width: 2.6; color: var(--accent); }
+.spell-btn.busy { opacity: .45; cursor: progress; }
+.spell-panel {
+  margin: 0 8px 6px; padding: 10px 12px; border-radius: 14px;
+  background: var(--surface); border: 1px solid var(--line); box-shadow: 0 4px 14px rgba(0,0,0,.12);
+}
+.spell-head { display: flex; gap: 6px; align-items: baseline; font-size: 13.5px; color: var(--muted); margin-bottom: 4px; }
+.spell-head b { color: var(--text); font-weight: 650; }
+.spell-text { white-space: pre-wrap; word-break: break-word; line-height: 1.5; max-height: 30vh; overflow-y: auto; }
+.spell-text mark { background: none; color: var(--accent); font-weight: 650; text-decoration: underline; text-underline-offset: 3px; }
+.spell-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px; }
+.spell-apply {
+  border: 0; border-radius: 999px; padding: 6px 16px; cursor: pointer;
+  background: var(--accent); color: var(--accent-text); font-weight: 650; font-size: 14px;
+}
+
 /* ---------- 이모티콘 ---------- */
 .sticker-panel {
   display: grid; grid-template-columns: repeat(auto-fill, minmax(86px, 1fr)); gap: 6px;
