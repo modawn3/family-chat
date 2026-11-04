@@ -3,17 +3,21 @@
   --surface: #FFFFFF;
   --surface-2: #EFE8DE;
   --text: #2B2622;
-  --muted: #8A8077;
+  --muted: #6F665D;
   --line: #E4DBCF;
-  --accent: #D9733B;
+  --accent: #B95820;
+  --accent-ink: #A8501D; /* 주황 글씨용 (배경 위 대비 4.5 이상) */
   --accent-text: #FFFFFF;
   --mine: #FBD6A9;
   --mine-text: #3A2A1A;
   --theirs: #FFFFFF;
   --theirs-text: #2B2622;
-  --unread: #D9733B;
+  --unread: #A8501D;
+  --red: #BD3A2E;
+  --blue: #2C67BD;
   --error: #C4402F;
   --shadow: 0 1px 2px rgba(60, 40, 20, .08);
+  --focus-ring: rgba(185, 88, 32, .22);
   color-scheme: light dark;
 }
 @media (prefers-color-scheme: dark) {
@@ -25,13 +29,17 @@
     --muted: #9C948B;
     --line: #38342F;
     --accent: #E8894F;
+    --accent-ink: #E8894F;
     --accent-text: #1C1B19;
     --mine: #6E4A26;
     --mine-text: #FBEBDA;
     --theirs: #2F2C28;
     --theirs-text: #EEE8E1;
     --unread: #F0A06B;
+    --red: #F07B6E;
+    --blue: #74A7EE;
     --shadow: none;
+    --focus-ring: rgba(232, 137, 79, .3);
   }
 }
 
@@ -49,6 +57,9 @@ body {
 }
 [hidden] { display: none !important; }
 button { font: inherit; color: inherit; }
+/* 키보드로 움직일 때 지금 위치가 잘 보이게 */
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+::selection { background: var(--mine); color: var(--mine-text); }
 
 .app {
   height: var(--app-h, 100dvh);
@@ -73,7 +84,7 @@ button { font: inherit; color: inherit; }
   background: var(--surface); border: 1px solid var(--line); border-radius: 12px;
   padding: 13px 14px; outline: none;
 }
-#login-form input:focus { border-color: var(--accent); }
+#login-form input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--focus-ring); }
 .primary {
   margin-top: 6px; border: 0; border-radius: 12px; padding: 14px;
   background: var(--accent); color: var(--accent-text); font-weight: 600; font-size: 16px; cursor: pointer;
@@ -93,7 +104,7 @@ button { font: inherit; color: inherit; }
 .title h1 { font-size: 18px; margin: 0; letter-spacing: -0.01em; }
 .title p { margin: 0; font-size: 12.5px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .icon-btn {
-  width: 42px; height: 42px; flex: none;
+  width: 44px; height: 44px; flex: none;
   display: inline-grid; place-items: center;
   border: 0; background: transparent; border-radius: 50%; cursor: pointer;
   color: var(--text);
@@ -120,8 +131,9 @@ button { font: inherit; color: inherit; }
   background: var(--surface-2); border-radius: 12px; font-size: 13.5px;
 }
 .banner p { flex: 1; margin: 0; }
-.banner-action { border: 0; background: var(--accent); color: var(--accent-text); border-radius: 8px; padding: 6px 12px; font-weight: 600; cursor: pointer; }
-.banner-close { border: 0; background: none; color: var(--muted); padding: 6px; cursor: pointer; }
+.banner-action { border: 0; background: var(--accent); color: var(--accent-text); border-radius: 8px; min-height: 36px; padding: 6px 14px; font-weight: 600; cursor: pointer; }
+.banner-close { flex: none; width: 40px; height: 40px; display: grid; place-items: center; border: 0; background: none; color: var(--muted); padding: 0; border-radius: 50%; cursor: pointer; }
+.banner-close svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; }
 
 /* ---------- 메시지 목록 ---------- */
 .messages {
@@ -186,12 +198,12 @@ button { font: inherit; color: inherit; }
   flex: 1; min-width: 0; resize: none;
   font: inherit; font-size: 16px; color: var(--text);
   background: var(--surface); border: 1px solid var(--line); border-radius: 21px;
-  padding: 9px 14px; max-height: 140px; line-height: 1.4; outline: none;
+  padding: 10px 14px; max-height: 140px; line-height: 1.4; outline: none;
 }
-.composer textarea:focus { border-color: var(--accent); }
+.composer textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--focus-ring); }
 .attach { color: var(--muted); }
 .send {
-  width: 42px; height: 42px; flex: none; border: 0; border-radius: 50%;
+  width: 44px; height: 44px; flex: none; border: 0; border-radius: 50%;
   background: var(--accent); color: var(--accent-text); display: grid; place-items: center; cursor: pointer;
 }
 .send:disabled { background: var(--surface-2); color: var(--muted); cursor: default; }
@@ -210,10 +222,10 @@ button { font: inherit; color: inherit; }
 .spell-head { display: flex; gap: 6px; align-items: baseline; font-size: 13.5px; color: var(--muted); margin-bottom: 4px; }
 .spell-head b { color: var(--text); font-weight: 650; }
 .spell-text { white-space: pre-wrap; word-break: break-word; line-height: 1.5; max-height: 30vh; overflow-y: auto; }
-.spell-text mark { background: none; color: var(--accent); font-weight: 650; text-decoration: underline; text-underline-offset: 3px; }
+.spell-text mark { background: none; color: var(--accent-ink); font-weight: 650; text-decoration: underline; text-underline-offset: 3px; }
 .spell-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px; }
 .spell-apply {
-  border: 0; border-radius: 999px; padding: 6px 16px; cursor: pointer;
+  border: 0; border-radius: 999px; min-height: 40px; padding: 8px 18px; cursor: pointer;
   background: var(--accent); color: var(--accent-text); font-weight: 650; font-size: 14px;
 }
 
@@ -238,11 +250,11 @@ button { font: inherit; color: inherit; }
 .pane { flex: 1; min-height: 0; display: flex; flex-direction: column; position: relative; }
 .tabs { display: flex; background: var(--bg); border-bottom: 1px solid var(--line); }
 .tabs button {
-  flex: 1; border: 0; background: none; padding: 10px 0 9px; cursor: pointer;
+  flex: 1; border: 0; background: none; padding: 12px 0 11px; cursor: pointer;
   font-size: 15px; color: var(--muted); position: relative;
 }
 .tabs .tab-link {
-  flex: 1; padding: 10px 0 9px; text-align: center; text-decoration: none;
+  flex: 1; padding: 12px 0 11px; text-align: center; text-decoration: none;
   font-size: 15px; color: var(--muted);
 }
 .tabs button[aria-selected="true"] { color: var(--text); font-weight: 650; box-shadow: inset 0 -2px 0 var(--accent); }
@@ -251,22 +263,22 @@ button { font: inherit; color: inherit; }
   background: var(--accent); margin-left: 5px; vertical-align: 2px;
 }
 .today-strip {
-  margin: 8px 12px 0; padding: 9px 14px; text-align: left; cursor: pointer;
+  margin: 8px 12px 0; padding: 11px 14px; text-align: left; cursor: pointer;
   background: var(--surface); border: 1px solid var(--line); border-radius: 12px;
   font-size: 14px; color: var(--text); box-shadow: var(--shadow);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
-.today-strip b { color: var(--accent); font-weight: 650; }
+.today-strip b { color: var(--accent-ink); font-weight: 650; }
 
 /* ---------- 채팅 속 일정 카드 ---------- */
 .bubble.event-card { padding: 11px 14px 10px; min-width: 210px; max-width: 300px; }
-.event-card .ev-label { font-size: 12.5px; font-weight: 650; color: var(--accent); margin-bottom: 2px; }
+.event-card .ev-label { font-size: 12.5px; font-weight: 650; color: var(--accent-ink); margin-bottom: 2px; }
 .mine .event-card .ev-label { color: inherit; opacity: .75; }
 .event-card .ev-title { font-weight: 700; font-size: 16px; }
 .event-card .ev-when { font-size: 13.5px; opacity: .85; margin-top: 2px; }
 .event-card .ev-who { font-size: 12.5px; opacity: .7; margin-top: 2px; }
 .event-card .ev-open {
-  margin-top: 9px; width: 100%; border: 0; border-radius: 9px; padding: 7px; cursor: pointer;
+  margin-top: 9px; width: 100%; min-height: 40px; border: 0; border-radius: 9px; padding: 8px; cursor: pointer;
   background: rgba(0, 0, 0, .06); font-size: 13.5px; font-weight: 600;
 }
 @media (prefers-color-scheme: dark) { .event-card .ev-open { background: rgba(255, 255, 255, .1); } }
@@ -277,23 +289,21 @@ button { font: inherit; color: inherit; }
 .cal-head .icon-btn svg { stroke-width: 2.2; }
 .chip-btn {
   margin-left: auto; border: 1px solid var(--line); background: var(--surface); border-radius: 999px;
-  padding: 6px 14px; font-size: 14px; cursor: pointer;
+  min-height: 40px; padding: 8px 16px; font-size: 14px; cursor: pointer;
 }
 .cal-scroll { flex: 1; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 0 8px 96px; }
 .cal-week, .cal-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); }
 .cal-week { font-size: 12.5px; color: var(--muted); text-align: center; padding: 4px 0 6px; }
-.red { color: #D9473B; }
-.blue { color: #3B7DD8; }
-@media (prefers-color-scheme: dark) { .red { color: #F07B6E; } .blue { color: #74A7EE; } }
+.red { color: var(--red); }
+.blue { color: var(--blue); }
 
 .cell {
   min-height: 70px; border: 0; border-top: 1px solid var(--line); background: none;
   padding: 4px 2px 5px; display: flex; flex-direction: column; gap: 2px; align-items: stretch;
   text-align: left; cursor: pointer; overflow: hidden; border-radius: 0; color: var(--text);
 }
-.cell.red .num { color: #D9473B; }
-.cell.blue .num { color: #3B7DD8; }
-@media (prefers-color-scheme: dark) { .cell.red .num { color: #F07B6E; } .cell.blue .num { color: #74A7EE; } }
+.cell.red .num { color: var(--red); }
+.cell.blue .num { color: var(--blue); }
 .cell.out { opacity: .38; }
 .cell.selected { background: var(--surface-2); border-radius: 10px; border-top-color: transparent; }
 .cell-head { display: flex; align-items: center; gap: 3px; min-width: 0; padding-left: 2px; }
@@ -302,13 +312,12 @@ button { font: inherit; color: inherit; }
   display: inline-grid; place-items: center; flex: none;
 }
 .cell.today .num { background: var(--accent); color: var(--accent-text) !important; }
-.hol { display: none; font-size: 11px; color: #D9473B; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-@media (prefers-color-scheme: dark) { .hol { color: #F07B6E; } }
+.hol { display: none; font-size: 11px; color: var(--red); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .lunar { display: none; font-size: 9.5px; color: var(--muted); white-space: nowrap; flex: none; font-variant-numeric: tabular-nums; }
 .lunar.key { display: inline; }
 .day-lunar { font-size: 13px; font-weight: 400; color: var(--muted); }
 .ev {
-  display: block; font-size: 10.5px; line-height: 1.4; padding: 0 4px; border-radius: 4px;
+  display: block; font-size: 11px; line-height: 1.4; padding: 0 3px; border-radius: 4px;
   background: var(--c); color: #fff; white-space: nowrap; overflow: hidden; text-overflow: clip; font-weight: 550;
 }
 .more { font-size: 10.5px; color: var(--muted); padding-left: 4px; }
@@ -337,6 +346,11 @@ button { font: inherit; color: inherit; }
 }
 .fab svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; }
 
+@media (max-width: 639px) {
+  /* 음력은 날짜 숫자 아래 줄에. 모든 칸이 같은 높이를 비워 둬서 일정 줄이 가지런함 */
+  .cell-head { flex-wrap: wrap; row-gap: 0; align-content: flex-start; min-height: 34px; }
+  .lunar.key { flex-basis: 100%; padding-left: 2px; line-height: 1.25; }
+}
 @media (min-width: 640px) {
   .cell { min-height: 92px; padding: 6px 4px; }
   .ev { font-size: 12px; padding: 1px 6px; }
@@ -364,7 +378,7 @@ button { font: inherit; color: inherit; }
   background: var(--bg); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; outline: none;
 }
 .field textarea { resize: vertical; min-height: 64px; }
-.field input:focus, .field select:focus, .field textarea:focus { border-color: var(--accent); }
+.field input:focus, .field select:focus, .field textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--focus-ring); }
 .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .switch { display: flex; align-items: center; gap: 10px; font-size: 15px; cursor: pointer; }
 .switch input { width: 20px; height: 20px; accent-color: var(--accent); margin: 0; }
@@ -377,7 +391,7 @@ button { font: inherit; color: inherit; }
 }
 .chip input:checked + span { background: var(--c); color: #fff; font-weight: 600; }
 .chip input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 2px; }
-.repeat-hint { margin: -4px 0 0; font-size: 13px; color: var(--accent); }
+.repeat-hint { margin: -4px 0 0; font-size: 13px; color: var(--accent-ink); }
 .repeat-hint:empty { display: none; }
 .sheet-actions { display: flex; align-items: center; gap: 8px; margin-top: 4px; }
 .sheet-actions .spacer { flex: 1; }
@@ -400,6 +414,12 @@ button { font: inherit; color: inherit; }
   display: grid; place-items: center; padding: env(safe-area-inset-top) 0 env(safe-area-inset-bottom);
 }
 .lightbox img { max-width: 100vw; max-height: 100%; object-fit: contain; }
+.lightbox-close {
+  position: absolute; top: calc(10px + env(safe-area-inset-top)); right: 10px;
+  width: 44px; height: 44px; display: grid; place-items: center; border: 0; border-radius: 50%;
+  background: rgba(255, 255, 255, .16); color: #fff; cursor: pointer;
+}
+.lightbox-close svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; }
 .toast {
   position: fixed; left: 50%; transform: translateX(-50%); z-index: 2147483647;
   bottom: calc(90px + env(safe-area-inset-bottom));

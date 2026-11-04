@@ -718,6 +718,16 @@ async function sendText() {
     return;
   }
   addMessages([data]);
+  deleteHintOnce();
+}
+
+// 내 메시지 지우는 방법은 화면에 안 보이므로, 처음 보낼 때 한 번만 알려줌
+function deleteHintOnce() {
+  try {
+    if (localStorage.getItem("delete-hint")) return;
+    localStorage.setItem("delete-hint", "1");
+  } catch { return; }
+  toast(isTouch ? "보낸 메시지를 길게 누르면 지울 수 있어요" : "보낸 메시지를 마우스 오른쪽 버튼으로 누르면 지울 수 있어요", 5000);
 }
 
 // ---------------------------------------------------------------------
@@ -923,7 +933,9 @@ async function openPhoto(m, previewSrc) {
   const big = $("img", el.lightbox);
   big.crossOrigin = "anonymous";
   if (previewSrc) big.src = previewSrc;
+  lightboxReturn = document.activeElement;
   el.lightbox.hidden = false;
+  $(".lightbox-close", el.lightbox).focus({ preventScroll: true });
   if (!m.thumb_path) return; // 예전 사진은 이미 큰 사진
 
   let url = state.urls.get(m.image_path);
@@ -939,9 +951,16 @@ async function openPhoto(m, previewSrc) {
   loader.onload = () => { if (!el.lightbox.hidden) big.src = url; };
   loader.src = url;
 }
-el.lightbox.addEventListener("click", () => { el.lightbox.hidden = true; });
+let lightboxReturn = null;
+function closePhoto() {
+  if (el.lightbox.hidden) return;
+  el.lightbox.hidden = true;
+  lightboxReturn?.focus?.({ preventScroll: true });
+  lightboxReturn = null;
+}
+el.lightbox.addEventListener("click", closePhoto); // 사진·빈 곳·✕ 어디를 눌러도 닫힘
 document.addEventListener("keydown", (e) => {
-  if (e.key === "Escape") { el.lightbox.hidden = true; el.menu.hidden = true; }
+  if (e.key === "Escape") { closePhoto(); el.menu.hidden = true; }
 });
 
 // ---------------------------------------------------------------------

@@ -25,8 +25,9 @@ const HOLIDAYS = {
   "08-15": "광복절", "10-03": "개천절", "10-09": "한글날", "12-25": "성탄절",
 };
 // 가족별 색상 (가족 명단 순서대로). 여러 명이거나 아무도 안 고르면 "가족 모두" 색
-const MEMBER_COLORS = ["#3B7DD8", "#D2508A", "#2E9D6A", "#8B5CF6", "#B7791F", "#0E8A96", "#64748B"];
-const FAMILY_COLOR = "#D9733B";
+// 흰 글씨를 올려도 잘 읽히게(대비 4.5 이상) 고른 색
+const MEMBER_COLORS = ["#2F6DC4", "#C13F78", "#1F8257", "#7C4DEB", "#94621A", "#0A7A85", "#5B6779"];
+const FAMILY_COLOR = "#B95820";
 const MAX_IN_CELL = 2;
 
 // ---------------------------------------------------------------------
@@ -249,8 +250,9 @@ export function createCalendar({ sb, getMemberNames, onAnnounce, onChange, toast
       cell.className = "cell";
       cell.dataset.date = day;
       if (p.m !== m) cell.classList.add("out");
-      if (day === today) cell.classList.add("today");
+      if (day === today) { cell.classList.add("today"); cell.setAttribute("aria-current", "date"); }
       if (day === st.selected) cell.classList.add("selected");
+      cell.setAttribute("aria-pressed", String(day === st.selected));
       if (i % 7 === 0 || hol) cell.classList.add("red");
       else if (i % 7 === 6) cell.classList.add("blue");
       cell.setAttribute("aria-label",
